@@ -1,56 +1,48 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Layout from '@/components/Layout'
 import IRRPanel from '@/components/IRRPanel'
 import ActivityFeed from '@/components/ActivityFeed'
 import ExportModal from '@/components/ExportModal'
-
-interface Document {
-  id: string
-  name: string
-  type: 'transcript' | 'note' | 'media'
-  createdAt: string
-  wordCount: number
-  codeCount: number
-  lastCoderId?: string
-  lastCoderName?: string
-}
-
-interface Code {
-  id: string
-  name: string
-  color: string
-  frequency: number
-  parentId?: string
-}
-
-// Mock data
-const mockDocuments: Document[] = [
-  { id: '1', name: 'Interview_001_Schmidt.txt', type: 'transcript', createdAt: '2024-01-15', wordCount: 3420, codeCount: 24, lastCoderName: 'Anna M.' },
-  { id: '2', name: 'Interview_002_Mueller.txt', type: 'transcript', createdAt: '2024-01-16', wordCount: 2890, codeCount: 18, lastCoderName: 'Max K.' },
-  { id: '3', name: 'Feldnotizen_Workshop.md', type: 'note', createdAt: '2024-01-17', wordCount: 1250, codeCount: 12 },
-  { id: '4', name: 'Interview_003_Weber.txt', type: 'transcript', createdAt: '2024-01-18', wordCount: 4100, codeCount: 31, lastCoderName: 'Anna M.' },
-  { id: '5', name: 'Fokusgruppe_Audio.mp3', type: 'media', createdAt: '2024-01-19', wordCount: 0, codeCount: 0 },
-]
-
-const mockCodes: Code[] = [
-  { id: '1', name: 'Nutzererfahrung', color: '#f59e0b', frequency: 45 },
-  { id: '2', name: 'Positive Aspekte', color: '#22c55e', frequency: 23, parentId: '1' },
-  { id: '3', name: 'Negative Aspekte', color: '#ef4444', frequency: 18, parentId: '1' },
-  { id: '4', name: 'Verbesserungsvorschläge', color: '#3b82f6', frequency: 28 },
-  { id: '5', name: 'UI/UX', color: '#8b5cf6', frequency: 15, parentId: '4' },
-  { id: '6', name: 'Funktionen', color: '#06b6d4', frequency: 12, parentId: '4' },
-  { id: '7', name: 'Emotionen', color: '#ec4899', frequency: 34 },
-]
+import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 
 type TabType = 'documents' | 'codes' | 'team' | 'analysis'
 
 export default function ProjectPage() {
   const { projectId } = useParams()
+  const {
+    currentProject,
+    documents,
+    codes,
+    codings,
+    isLoading,
+    isLoadingDocuments,
+    isLoadingCodes,
+    error,
+    fetchProject,
+    fetchDocuments,
+    fetchCodes,
+    fetchCodings,
+  } = useProjectStore()
+
   const [activeTab, setActiveTab] = useState<TabType>('documents')
-  const [documents] = useState<Document[]>(mockDocuments)
-  const [codes] = useState<Code[]>(mockCodes)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showNewDocument, setShowNewDocument] = useState(false)
+
+  // Fetch project and data on mount
+  useEffect(() => {
+    if (projectId) {
+      fetchProject(projectId)
+      fetchDocuments(projectId)
+      fetchCodes(projectId)
+    }
+  }, [projectId, fetchProject, fetchDocuments, fetchCodes])
+
+  // Calculate code frequencies from codings
+  const codeFrequencies = codes.map((code) => ({
+    ...code,
+    frequency: codings.filter((c) => c.codeId === code.id).length,
+  }))
 
   const tabs: { id: TabType; name: string; count?: number }[] = [
     { id: 'documents', name: 'Dokumente', count: documents.length },
@@ -68,96 +60,228 @@ export default function ProjectPage() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          <span className="text-surface-100">Interview-Studie 2024</span>
+          <span className="text-surface-100">{currentProject?.name || 'Projekt'}</span>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && !currentProject && (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+          </div>
+        )}
 
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-surface-100">Interview-Studie 2024</h1>
-            <p className="text-surface-400 mt-1">Qualitative Interviews zur Nutzererfahrung</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowExportModal(true)}
-              className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              Export
-            </button>
-            <button className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              AI Kodieren
-            </button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="border-b border-surface-800 mb-6">
-          <nav className="flex gap-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-primary-500 text-primary-400'
-                    : 'border-transparent text-surface-400 hover:text-surface-100'
-                }`}
-              >
-                {tab.name}
-                {tab.count !== undefined && (
-                  <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-surface-800">
-                    {tab.count}
-                  </span>
+        {currentProject && (
+          <>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-surface-100">{currentProject.name}</h1>
+                {currentProject.description && (
+                  <p className="text-surface-400 mt-1">{currentProject.description}</p>
                 )}
-              </button>
-            ))}
-          </nav>
-        </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  Export
+                </button>
+                <button className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  AI Kodieren
+                </button>
+              </div>
+            </div>
 
-        {/* Tab Content */}
-        {activeTab === 'documents' && (
-          <DocumentsTab documents={documents} projectId={projectId || ''} />
+            {/* Tabs */}
+            <div className="border-b border-surface-800 mb-6">
+              <nav className="flex gap-6">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === tab.id
+                        ? 'border-primary-500 text-primary-400'
+                        : 'border-transparent text-surface-400 hover:text-surface-100'
+                    }`}
+                  >
+                    {tab.name}
+                    {tab.count !== undefined && (
+                      <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-surface-800">
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'documents' && (
+              <DocumentsTab
+                documents={documents}
+                projectId={projectId || ''}
+                isLoading={isLoadingDocuments}
+                onAddDocument={() => setShowNewDocument(true)}
+              />
+            )}
+            {activeTab === 'codes' && (
+              <CodesTab codes={codeFrequencies} projectId={projectId || ''} isLoading={isLoadingCodes} />
+            )}
+            {activeTab === 'team' && (
+              <TeamTab />
+            )}
+            {activeTab === 'analysis' && (
+              <AnalysisTab codes={codeFrequencies} />
+            )}
+          </>
         )}
-        {activeTab === 'codes' && (
-          <CodesTab codes={codes} />
+
+        {/* Export Modal */}
+        {showExportModal && currentProject && (
+          <ExportModal
+            projectName={currentProject.name}
+            documentCount={documents.length}
+            codingCount={codings.length}
+            onExport={(format, options) => {
+              console.log('Export:', format, options)
+              alert(`Export als ${format.toUpperCase()} gestartet!`)
+            }}
+            onClose={() => setShowExportModal(false)}
+          />
         )}
-        {activeTab === 'team' && (
-          <TeamTab />
-        )}
-        {activeTab === 'analysis' && (
-          <AnalysisTab codes={codes} />
+
+        {/* New Document Modal */}
+        {showNewDocument && projectId && (
+          <NewDocumentModal
+            projectId={projectId}
+            onClose={() => setShowNewDocument(false)}
+          />
         )}
       </div>
-
-      {/* Export Modal */}
-      {showExportModal && (
-        <ExportModal
-          projectName="Interview-Studie 2024"
-          documentCount={documents.length}
-          codingCount={codes.reduce((sum, c) => sum + c.frequency, 0)}
-          onExport={(format, options) => {
-            console.log('Export:', format, options)
-            alert(`Export als ${format.toUpperCase()} gestartet!`)
-          }}
-          onClose={() => setShowExportModal(false)}
-        />
-      )}
     </Layout>
   )
 }
 
-function DocumentsTab({ documents, projectId }: { documents: Document[]; projectId: string }) {
+function NewDocumentModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+  const { createDocument } = useProjectStore()
+  const [name, setName] = useState('')
+  const [content, setContent] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+
+    setIsCreating(true)
+    const doc = await createDocument({
+      projectId,
+      name: name.trim(),
+      content: content.trim(),
+      fileType: 'text',
+    })
+
+    if (doc) {
+      onClose()
+    }
+    setIsCreating(false)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative w-full max-w-2xl bg-surface-900 rounded-2xl border border-surface-800 shadow-xl">
+        <div className="p-6 border-b border-surface-800">
+          <h2 className="text-xl font-semibold text-surface-100">Neues Dokument</h2>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-surface-300 mb-1.5">
+              Dokumentname *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              placeholder="z.B. Interview_001_Schmidt.txt"
+              autoFocus
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-surface-300 mb-1.5">
+              Inhalt
+            </label>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={12}
+              className="w-full px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 resize-none font-mono text-sm"
+              placeholder="Fügen Sie hier den Dokumentinhalt ein..."
+            />
+            <p className="text-xs text-surface-500 mt-1">
+              {content.split(/\s+/).filter(Boolean).length} Wörter
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 font-medium"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              disabled={isCreating || !name.trim()}
+              className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium disabled:opacity-50"
+            >
+              {isCreating ? 'Erstellen...' : 'Dokument erstellen'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function DocumentsTab({
+  documents,
+  projectId,
+  isLoading,
+  onAddDocument,
+}: {
+  documents: Document[]
+  projectId: string
+  isLoading: boolean
+  onAddDocument: () => void
+}) {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center gap-3">
-        <button className="px-4 py-2 rounded-lg border border-dashed border-surface-700 text-surface-400 hover:border-primary-500 hover:text-primary-400 text-sm flex items-center gap-2">
+        <button
+          onClick={onAddDocument}
+          className="px-4 py-2 rounded-lg border border-dashed border-surface-700 text-surface-400 hover:border-primary-500 hover:text-primary-400 text-sm flex items-center gap-2"
+        >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -165,64 +289,84 @@ function DocumentsTab({ documents, projectId }: { documents: Document[]; project
         </button>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="bg-surface-900 rounded-xl border border-surface-800 p-8 text-center">
+          <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-surface-400">Dokumente werden geladen...</p>
+        </div>
+      )}
+
       {/* Document List */}
-      <div className="bg-surface-900 rounded-xl border border-surface-800 overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-surface-800 text-left">
-              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider">Name</th>
-              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider hidden md:table-cell">Typ</th>
-              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider hidden lg:table-cell">Wörter</th>
-              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider">Codes</th>
-              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider hidden md:table-cell">Zuletzt kodiert</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-surface-800">
-            {documents.map((doc) => (
-              <tr key={doc.id} className="hover:bg-surface-800/50 transition-colors">
-                <td className="px-4 py-3">
-                  <Link to={`/project/${projectId}/document/${doc.id}`} className="flex items-center gap-3 hover:text-primary-400">
-                    <DocumentIcon type={doc.type} />
-                    <span className="text-sm text-surface-100 hover:text-primary-400">{doc.name}</span>
-                  </Link>
-                </td>
-                <td className="px-4 py-3 hidden md:table-cell">
-                  <span className="text-xs text-surface-400 capitalize">{doc.type}</span>
-                </td>
-                <td className="px-4 py-3 hidden lg:table-cell">
-                  <span className="text-sm text-surface-400">{doc.wordCount.toLocaleString()}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-sm ${doc.codeCount > 0 ? 'text-primary-400' : 'text-surface-500'}`}>
-                    {doc.codeCount}
-                  </span>
-                </td>
-                <td className="px-4 py-3 hidden md:table-cell">
-                  {doc.lastCoderName ? (
-                    <span className="text-sm text-surface-400">{doc.lastCoderName}</span>
-                  ) : (
-                    <span className="text-sm text-surface-600">-</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <Link to={`/project/${projectId}/document/${doc.id}`} className="p-1 rounded hover:bg-surface-700 text-surface-400 inline-block">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                </td>
+      {!isLoading && documents.length > 0 && (
+        <div className="bg-surface-900 rounded-xl border border-surface-800 overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-surface-800 text-left">
+                <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider">Name</th>
+                <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider hidden md:table-cell">Typ</th>
+                <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider hidden lg:table-cell">Wörter</th>
+                <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider">Erstellt</th>
+                <th className="px-4 py-3"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-surface-800">
+              {documents.map((doc) => (
+                <tr key={doc.id} className="hover:bg-surface-800/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <Link to={`/project/${projectId}/document/${doc.id}`} className="flex items-center gap-3 hover:text-primary-400">
+                      <DocumentIcon type={doc.fileType} />
+                      <span className="text-sm text-surface-100 hover:text-primary-400">{doc.name}</span>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    <span className="text-xs text-surface-400 capitalize">{doc.fileType}</span>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <span className="text-sm text-surface-400">{doc.wordCount.toLocaleString()}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-surface-400">
+                      {new Date(doc.createdAt).toLocaleDateString('de-DE')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link to={`/project/${projectId}/document/${doc.id}`} className="p-1 rounded hover:bg-surface-700 text-surface-400 inline-block">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && documents.length === 0 && (
+        <div className="bg-surface-900 rounded-xl border border-surface-800 p-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-surface-800 flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <p className="text-surface-400 mb-4">Noch keine Dokumente vorhanden</p>
+          <button
+            onClick={onAddDocument}
+            className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium"
+          >
+            Erstes Dokument hinzufügen
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
-function DocumentIcon({ type }: { type: Document['type'] }) {
-  if (type === 'media') {
+function DocumentIcon({ type }: { type: string }) {
+  if (type === 'media' || type === 'audio') {
     return (
       <div className="w-8 h-8 rounded bg-purple-500/10 flex items-center justify-center">
         <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -231,7 +375,7 @@ function DocumentIcon({ type }: { type: Document['type'] }) {
       </div>
     )
   }
-  if (type === 'note') {
+  if (type === 'note' || type === 'pdf') {
     return (
       <div className="w-8 h-8 rounded bg-blue-500/10 flex items-center justify-center">
         <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -249,14 +393,35 @@ function DocumentIcon({ type }: { type: Document['type'] }) {
   )
 }
 
-function CodesTab({ codes }: { codes: Code[] }) {
+function CodesTab({ codes, projectId, isLoading }: { codes: (Code & { frequency: number })[]; projectId: string; isLoading: boolean }) {
+  const { createCode } = useProjectStore()
+  const [showNewCode, setShowNewCode] = useState(false)
+  const [newCodeName, setNewCodeName] = useState('')
+  const [newCodeColor, setNewCodeColor] = useState('#3b82f6')
+
   const rootCodes = codes.filter((c) => !c.parentId)
+
+  const handleCreateCode = async () => {
+    if (!newCodeName.trim()) return
+
+    await createCode({
+      projectId,
+      name: newCodeName.trim(),
+      color: newCodeColor,
+    })
+
+    setNewCodeName('')
+    setShowNewCode(false)
+  }
 
   return (
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center gap-3">
-        <button className="px-4 py-2 rounded-lg border border-dashed border-surface-700 text-surface-400 hover:border-primary-500 hover:text-primary-400 text-sm flex items-center gap-2">
+        <button
+          onClick={() => setShowNewCode(true)}
+          className="px-4 py-2 rounded-lg border border-dashed border-surface-700 text-surface-400 hover:border-primary-500 hover:text-primary-400 text-sm flex items-center gap-2"
+        >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -264,19 +429,79 @@ function CodesTab({ codes }: { codes: Code[] }) {
         </button>
       </div>
 
-      {/* Code Tree */}
-      <div className="bg-surface-900 rounded-xl border border-surface-800 p-4">
-        <div className="space-y-2">
-          {rootCodes.map((code) => (
-            <CodeItem key={code.id} code={code} codes={codes} level={0} />
-          ))}
+      {/* New Code Input */}
+      {showNewCode && (
+        <div className="bg-surface-900 rounded-xl border border-surface-800 p-4">
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={newCodeColor}
+              onChange={(e) => setNewCodeColor(e.target.value)}
+              className="w-8 h-8 rounded cursor-pointer"
+            />
+            <input
+              type="text"
+              value={newCodeName}
+              onChange={(e) => setNewCodeName(e.target.value)}
+              placeholder="Code-Name eingeben..."
+              className="flex-1 px-4 py-2 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateCode()
+                if (e.key === 'Escape') setShowNewCode(false)
+              }}
+            />
+            <button
+              onClick={handleCreateCode}
+              className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium"
+            >
+              Erstellen
+            </button>
+            <button
+              onClick={() => setShowNewCode(false)}
+              className="px-4 py-2 rounded-lg border border-surface-700 text-surface-400 hover:bg-surface-800 text-sm"
+            >
+              Abbrechen
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="bg-surface-900 rounded-xl border border-surface-800 p-8 text-center">
+          <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-surface-400">Codes werden geladen...</p>
+        </div>
+      )}
+
+      {/* Code Tree */}
+      {!isLoading && codes.length > 0 && (
+        <div className="bg-surface-900 rounded-xl border border-surface-800 p-4">
+          <div className="space-y-2">
+            {rootCodes.map((code) => (
+              <CodeItem key={code.id} code={code} codes={codes} level={0} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && codes.length === 0 && (
+        <div className="bg-surface-900 rounded-xl border border-surface-800 p-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-surface-800 flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+          <p className="text-surface-400">Noch keine Codes vorhanden</p>
+        </div>
+      )}
     </div>
   )
 }
 
-function CodeItem({ code, codes, level }: { code: Code; codes: Code[]; level: number }) {
+function CodeItem({ code, codes, level }: { code: Code & { frequency: number }; codes: (Code & { frequency: number })[]; level: number }) {
   const [expanded, setExpanded] = useState(true)
   const children = codes.filter((c) => c.parentId === code.id)
 
@@ -373,9 +598,9 @@ function TeamTab() {
   )
 }
 
-function AnalysisTab({ codes }: { codes: Code[] }) {
+function AnalysisTab({ codes }: { codes: (Code & { frequency: number })[] }) {
   const sortedCodes = [...codes].sort((a, b) => b.frequency - a.frequency).slice(0, 5)
-  const maxFrequency = Math.max(...codes.map((c) => c.frequency))
+  const maxFrequency = Math.max(...codes.map((c) => c.frequency), 1)
 
   const mockCoders = [
     { id: 'c1', name: 'Anna Müller', codingCount: 87 },
@@ -396,25 +621,29 @@ function AnalysisTab({ codes }: { codes: Code[] }) {
       {/* Code Frequency Chart */}
       <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
         <h3 className="text-lg font-semibold text-surface-100 mb-4">Code-Häufigkeit</h3>
-        <div className="space-y-3">
-          {sortedCodes.map((code) => (
-            <div key={code.id} className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-surface-300">{code.name}</span>
-                <span className="text-surface-500">{code.frequency}</span>
+        {sortedCodes.length > 0 ? (
+          <div className="space-y-3">
+            {sortedCodes.map((code) => (
+              <div key={code.id} className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-surface-300">{code.name}</span>
+                  <span className="text-surface-500">{code.frequency}</span>
+                </div>
+                <div className="h-2 bg-surface-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(code.frequency / maxFrequency) * 100}%`,
+                      backgroundColor: code.color,
+                    }}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-surface-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${(code.frequency / maxFrequency) * 100}%`,
-                    backgroundColor: code.color,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-surface-500 text-sm">Noch keine Kodierungen vorhanden</p>
+        )}
       </div>
 
       {/* IRR Panel */}
