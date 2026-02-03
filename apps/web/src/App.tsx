@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
@@ -22,12 +22,14 @@ const LoadingSpinner = () => (
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuthStore()
+  const { user, isLoading, isInitialized } = useAuthStore()
 
-  if (isLoading) {
+  // Show loading while initializing or loading
+  if (!isInitialized || isLoading) {
     return <LoadingSpinner />
   }
 
+  // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/login" replace />
   }
@@ -35,12 +37,37 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>
 }
 
+// Auth callback handler for OAuth
+const AuthCallback = () => {
+  const { initialize } = useAuthStore()
+
+  useEffect(() => {
+    // Re-initialize to pick up the new session from OAuth callback
+    initialize()
+  }, [initialize])
+
+  return <LoadingSpinner />
+}
+
 function App() {
+  const { initialize, isInitialized } = useAuthStore()
+
+  // Initialize auth on app mount
+  useEffect(() => {
+    initialize()
+  }, [initialize])
+
+  // Show loading while auth is initializing
+  if (!isInitialized) {
+    return <LoadingSpinner />
+  }
+
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* Protected routes */}
         <Route
