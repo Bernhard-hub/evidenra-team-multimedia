@@ -115,7 +115,7 @@ export default function ProjectPage() {
 
         {/* Tab Content */}
         {activeTab === 'documents' && (
-          <DocumentsTab documents={documents} />
+          <DocumentsTab documents={documents} projectId={projectId || ''} />
         )}
         {activeTab === 'codes' && (
           <CodesTab codes={codes} />
@@ -131,7 +131,7 @@ export default function ProjectPage() {
   )
 }
 
-function DocumentsTab({ documents }: { documents: Document[] }) {
+function DocumentsTab({ documents, projectId }: { documents: Document[]; projectId: string }) {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -161,10 +161,10 @@ function DocumentsTab({ documents }: { documents: Document[] }) {
             {documents.map((doc) => (
               <tr key={doc.id} className="hover:bg-surface-800/50 transition-colors">
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
+                  <Link to={`/project/${projectId}/document/${doc.id}`} className="flex items-center gap-3 hover:text-primary-400">
                     <DocumentIcon type={doc.type} />
-                    <span className="text-sm text-surface-100">{doc.name}</span>
-                  </div>
+                    <span className="text-sm text-surface-100 hover:text-primary-400">{doc.name}</span>
+                  </Link>
                 </td>
                 <td className="px-4 py-3 hidden md:table-cell">
                   <span className="text-xs text-surface-400 capitalize">{doc.type}</span>
@@ -185,11 +185,11 @@ function DocumentsTab({ documents }: { documents: Document[] }) {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <button className="p-1 rounded hover:bg-surface-700 text-surface-400">
+                  <Link to={`/project/${projectId}/document/${doc.id}`} className="p-1 rounded hover:bg-surface-700 text-surface-400 inline-block">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
-                  </button>
+                  </Link>
                 </td>
               </tr>
             ))}

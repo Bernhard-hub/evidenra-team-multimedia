@@ -6,6 +6,7 @@ import { Suspense, lazy } from 'react'
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const ProjectPage = lazy(() => import('@/pages/ProjectPage'))
+const DocumentDetailPage = lazy(() => import('@/pages/DocumentDetailPage'))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
 const TeamPage = lazy(() => import('@/pages/TeamPage'))
 
@@ -55,6 +56,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/project/:projectId/document/:documentId"
+          element={
+            <ProtectedRoute>
+              <DocumentDetailPage />
             </ProtectedRoute>
           }
         />
