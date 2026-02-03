@@ -4,6 +4,7 @@ import Layout from '@/components/Layout'
 import DocumentViewer from '@/components/DocumentViewer'
 import CodeManager from '@/components/CodeManager'
 import AICodingPanel from '@/components/AICodingPanel'
+import { runAICoding, claude, type CodingMethod } from '@/lib/claude'
 
 interface Code {
   id: string
@@ -94,6 +95,8 @@ export default function DocumentDetailPage() {
   const [showAICoding, setShowAICoding] = useState(false)
   const [isAIProcessing, setIsAIProcessing] = useState(false)
   const [aiProgress, setAIProgress] = useState(0)
+  const [aiStatus, setAIStatus] = useState('')
+  const [aiError, setAIError] = useState<string | null>(null)
 
   const handleAddCoding = (coding: Omit<Coding, 'id'>) => {
     const newCoding: Coding = {
@@ -135,55 +138,118 @@ export default function DocumentDetailPage() {
     setCodings(codings.filter((c) => c.codeId !== id))
   }
 
-  const handleStartAICoding = (method: string) => {
+  const handleStartAICoding = async (method: string) => {
     setIsAIProcessing(true)
     setAIProgress(0)
+    setAIStatus('Initialisiere...')
+    setAIError(null)
 
-    // Simulate AI coding progress
-    const interval = setInterval(() => {
-      setAIProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsAIProcessing(false)
-          setShowAICoding(false)
+    // Check if API key is set
+    if (!claude.hasApiKey()) {
+      setAIError('Kein Claude API-Schlüssel konfiguriert. Bitte fügen Sie Ihren API-Schlüssel in den Einstellungen hinzu.')
+      setIsAIProcessing(false)
+      return
+    }
 
-          // Add mock AI-generated codings
-          const aiCodings: Coding[] = [
-            {
-              id: `ai-coding-${Date.now()}-1`,
-              codeId: 'code-4',
-              codeName: 'Lernprozess',
-              color: '#3b82f6',
-              startOffset: 587,
-              endOffset: 758,
-              selectedText: 'Nach etwa einer Woche wurde es deutlich besser. Ich habe mir ein paar Tutorial-Videos angeschaut und dann machte vieles plötzlich Sinn.',
-            },
-            {
-              id: `ai-coding-${Date.now()}-2`,
-              codeId: 'code-5',
-              codeName: 'Verbesserungsvorschlag',
-              color: '#8b5cf6',
-              startOffset: 892,
-              endOffset: 1059,
-              selectedText: 'Und vielleicht sollte die Software selbst einen besseren Onboarding-Prozess haben. So ein geführtes Tutorial direkt in der Anwendung wäre hilfreich gewesen.',
-            },
-            {
-              id: `ai-coding-${Date.now()}-3`,
-              codeId: 'code-6',
-              codeName: 'Feature-Bewertung',
-              color: '#06b6d4',
-              startOffset: 1155,
-              endOffset: 1215,
-              selectedText: 'Die Suchfunktion ist fantastisch. Ich kann alles sehr schnell finden.',
-            },
-          ]
+    try {
+      // Convert existing codes to the format expected by the API
+      const existingCodesForAPI = codes.map((code) => ({
+        name: code.name,
+        description: code.description,
+        color: code.color,
+      }))
 
-          setCodings((prev) => [...prev, ...aiCodings])
-          return 100
+      // Run the actual AI coding
+      const result = await runAICoding(
+        document.content,
+        method as CodingMethod,
+        existingCodesForAPI,
+        (progress, status) => {
+          setAIProgress(progress)
+          setAIStatus(status)
         }
-        return prev + Math.random() * 15
+      )
+
+      // Process the results and create codings
+      const newCodings: Coding[] = []
+      const newCodes: Code[] = []
+
+      // First, add any suggested codes that don't exist yet
+      result.suggestedCodes.forEach((suggestedCode, index) => {
+        const exists = codes.find(
+          (c) => c.name.toLowerCase() === suggestedCode.name.toLowerCase()
+        )
+        if (!exists && !newCodes.find(c => c.name.toLowerCase() === suggestedCode.name.toLowerCase())) {
+          newCodes.push({
+            id: `code-ai-${Date.now()}-${index}`,
+            name: suggestedCode.name,
+            description: suggestedCode.description,
+            color: suggestedCode.color,
+          })
+        }
       })
-    }, 500)
+
+      // Now process the codings
+      result.codings.forEach((aiCoding, index) => {
+        // Find or create the code for this coding
+        let matchingCode = codes.find(
+          (c) => c.name.toLowerCase() === aiCoding.codeName.toLowerCase()
+        ) || newCodes.find(
+          (c) => c.name.toLowerCase() === aiCoding.codeName.toLowerCase()
+        )
+
+        if (!matchingCode) {
+          // Create new code if it doesn't exist
+          matchingCode = {
+            id: `code-ai-${Date.now()}-new-${index}`,
+            name: aiCoding.codeName,
+            description: aiCoding.codeDescription,
+            color: result.suggestedCodes.find(s => s.name === aiCoding.codeName)?.color ||
+                   ['#f59e0b', '#ef4444', '#22c55e', '#3b82f6', '#8b5cf6', '#06b6d4'][index % 6],
+          }
+          newCodes.push(matchingCode)
+        }
+
+        // Create the coding entry
+        if (aiCoding.startOffset >= 0) {
+          newCodings.push({
+            id: `ai-coding-${Date.now()}-${index}`,
+            codeId: matchingCode.id,
+            codeName: matchingCode.name,
+            color: matchingCode.color,
+            startOffset: aiCoding.startOffset,
+            endOffset: aiCoding.endOffset,
+            selectedText: aiCoding.selectedText,
+            memo: aiCoding.reasoning,
+          })
+        }
+      })
+
+      // Update state
+      if (newCodes.length > 0) {
+        setCodes((prev) => [...prev, ...newCodes])
+      }
+      if (newCodings.length > 0) {
+        setCodings((prev) => [...prev, ...newCodings])
+      }
+
+      setAIProgress(100)
+      setAIStatus(`Fertig! ${newCodings.length} Kodierungen gefunden.`)
+
+      // Close panel after a short delay
+      setTimeout(() => {
+        setShowAICoding(false)
+        setIsAIProcessing(false)
+      }, 1500)
+    } catch (error) {
+      console.error('AI Coding error:', error)
+      setAIError(
+        error instanceof Error
+          ? error.message
+          : 'Ein unbekannter Fehler ist aufgetreten.'
+      )
+      setIsAIProcessing(false)
+    }
   }
 
   return (
@@ -287,6 +353,8 @@ export default function DocumentDetailPage() {
             onClose={() => !isAIProcessing && setShowAICoding(false)}
             isProcessing={isAIProcessing}
             progress={aiProgress}
+            statusMessage={aiStatus}
+            error={aiError}
           />
         )}
       </div>

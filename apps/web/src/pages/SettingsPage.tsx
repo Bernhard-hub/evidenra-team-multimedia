@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import { useAuthStore } from '@/stores/authStore'
+import { claude } from '@/lib/claude'
 
 type SettingsTab = 'profile' | 'organization' | 'api' | 'notifications'
 
@@ -270,6 +271,57 @@ function OrganizationSettings() {
 function ApiSettings() {
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [hasKey, setHasKey] = useState(false)
+
+  // Load existing API key on mount
+  useEffect(() => {
+    const existingKey = claude.getApiKey()
+    if (existingKey) {
+      // Show masked key
+      setApiKey('sk-ant-••••••••••••••••')
+      setHasKey(true)
+    }
+  }, [])
+
+  const handleSaveApiKey = () => {
+    setIsSaving(true)
+    setMessage(null)
+
+    try {
+      // Validate key format
+      if (!apiKey || apiKey === 'sk-ant-••••••••••••••••') {
+        setMessage({ type: 'error', text: 'Bitte geben Sie einen gültigen API-Schlüssel ein.' })
+        setIsSaving(false)
+        return
+      }
+
+      if (!apiKey.startsWith('sk-ant-')) {
+        setMessage({ type: 'error', text: 'Der API-Schlüssel muss mit "sk-ant-" beginnen.' })
+        setIsSaving(false)
+        return
+      }
+
+      // Save the key
+      claude.setApiKey(apiKey)
+      setHasKey(true)
+      setApiKey('sk-ant-••••••••••••••••')
+      setShowKey(false)
+      setMessage({ type: 'success', text: 'API-Schlüssel wurde erfolgreich gespeichert.' })
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Fehler beim Speichern des API-Schlüssels.' })
+    }
+
+    setIsSaving(false)
+  }
+
+  const handleClearApiKey = () => {
+    claude.clearApiKey()
+    setApiKey('')
+    setHasKey(false)
+    setMessage({ type: 'success', text: 'API-Schlüssel wurde entfernt.' })
+  }
 
   return (
     <div className="space-y-6">
@@ -277,8 +329,37 @@ function ApiSettings() {
       <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
         <h2 className="text-lg font-semibold text-surface-100 mb-2">Claude API-Schlüssel</h2>
         <p className="text-sm text-surface-400 mb-6">
-          Geben Sie Ihren Anthropic API-Schlüssel ein, um die AI-Kodierung zu nutzen
+          Geben Sie Ihren Anthropic API-Schlüssel ein, um die AI-Kodierung zu nutzen.{' '}
+          <a
+            href="https://console.anthropic.com/settings/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-400 hover:text-primary-300"
+          >
+            API-Schlüssel erstellen
+          </a>
         </p>
+
+        {/* Status Badge */}
+        {hasKey && (
+          <div className="mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+            <span className="text-sm text-green-400">API-Schlüssel konfiguriert</span>
+          </div>
+        )}
+
+        {/* Messages */}
+        {message && (
+          <div
+            className={`mb-4 p-3 rounded-lg text-sm ${
+              message.type === 'success'
+                ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+                : 'bg-red-500/10 border border-red-500/20 text-red-400'
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
 
         <div className="max-w-xl">
           <label className="block text-sm font-medium text-surface-300 mb-1.5">API-Schlüssel</label>
@@ -288,8 +369,13 @@ function ApiSettings() {
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
+                onFocus={() => {
+                  if (apiKey === 'sk-ant-••••••••••••••••') {
+                    setApiKey('')
+                  }
+                }}
                 className="w-full px-4 py-2.5 pr-10 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 placeholder-surface-500 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                placeholder="sk-ant-..."
+                placeholder="sk-ant-api03-..."
               />
               <button
                 onClick={() => setShowKey(!showKey)}
@@ -307,12 +393,24 @@ function ApiSettings() {
                 )}
               </button>
             </div>
-            <button className="px-4 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium">
-              Speichern
+            <button
+              onClick={handleSaveApiKey}
+              disabled={isSaving}
+              className="px-4 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium disabled:opacity-50"
+            >
+              {isSaving ? 'Speichern...' : 'Speichern'}
             </button>
+            {hasKey && (
+              <button
+                onClick={handleClearApiKey}
+                className="px-4 py-2.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 text-sm font-medium"
+              >
+                Entfernen
+              </button>
+            )}
           </div>
           <p className="text-xs text-surface-500 mt-2">
-            Der API-Schlüssel wird verschlüsselt gespeichert und niemals an Dritte weitergegeben.
+            Der API-Schlüssel wird lokal in Ihrem Browser gespeichert und niemals an unsere Server übertragen.
           </p>
         </div>
       </div>

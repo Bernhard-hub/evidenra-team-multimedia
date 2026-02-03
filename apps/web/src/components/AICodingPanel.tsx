@@ -9,6 +9,8 @@ interface AICodingPanelProps {
   onClose: () => void
   isProcessing?: boolean
   progress?: number
+  statusMessage?: string
+  error?: string | null
 }
 
 const methods: {
@@ -60,6 +62,8 @@ export default function AICodingPanel({
   onClose,
   isProcessing = false,
   progress = 0,
+  statusMessage = '',
+  error = null,
 }: AICodingPanelProps) {
   const [selectedMethod, setSelectedMethod] = useState<CodingMethod>('three-expert')
 
@@ -94,8 +98,25 @@ export default function AICodingPanel({
           </div>
         </div>
 
+        {/* Error State */}
+        {error && (
+          <div className="p-6 border-b border-surface-800">
+            <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-red-400">Fehler</h4>
+                  <p className="text-sm text-red-300/80 mt-1">{error}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Processing State */}
-        {isProcessing ? (
+        {isProcessing && !error ? (
           <div className="p-8">
             <div className="text-center mb-6">
               <div className="w-16 h-16 mx-auto mb-4 relative">
@@ -117,10 +138,10 @@ export default function AICodingPanel({
                 </svg>
               </div>
               <h3 className="text-lg font-medium text-surface-100 mb-2">
-                Kodierung läuft...
+                {progress >= 100 ? 'Fertig!' : 'Kodierung läuft...'}
               </h3>
               <p className="text-surface-400 text-sm">
-                {methods.find((m) => m.id === selectedMethod)?.name} analysiert das Dokument
+                {statusMessage || `${methods.find((m) => m.id === selectedMethod)?.name} analysiert das Dokument`}
               </p>
             </div>
 
