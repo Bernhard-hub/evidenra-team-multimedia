@@ -5,16 +5,10 @@ import DocumentViewer from '@/components/DocumentViewer'
 import CodeManager from '@/components/CodeManager'
 import AICodingPanel from '@/components/AICodingPanel'
 import { runAICoding, claude, type CodingMethod } from '@/lib/claude'
+import { useProjectStore } from '@/stores/projectStore'
 
-interface Code {
-  id: string
-  name: string
-  description?: string
-  color: string
-  parentId?: string | null
-}
-
-interface Coding {
+// Local interface for DocumentViewer compatibility
+interface ViewerCoding {
   id: string
   codeId: string
   codeName: string
@@ -25,120 +19,124 @@ interface Coding {
   memo?: string
 }
 
-// Mock data
-const mockDocument = {
-  id: 'doc-1',
-  name: 'Interview_001_Schmidt',
-  content: `Interviewer: Können Sie mir erzählen, wie Sie die neue Software zum ersten Mal benutzt haben?
-
-Teilnehmer: Ja, also am Anfang war ich ehrlich gesagt etwas überfordert. Die Oberfläche sah sehr komplex aus, mit vielen Buttons und Menüs. Ich wusste nicht, wo ich anfangen sollte.
-
-Interviewer: Wie haben Sie sich dabei gefühlt?
-
-Teilnehmer: Frustriert, würde ich sagen. Ich hatte das Gefühl, dass ich eigentlich produktiv sein sollte, aber stattdessen habe ich erstmal eine halbe Stunde damit verbracht, mich zurechtzufinden. Das war zeitlich gesehen nicht ideal.
-
-Interviewer: Und wie hat sich das im Laufe der Zeit verändert?
-
-Teilnehmer: Nach etwa einer Woche wurde es deutlich besser. Ich habe mir ein paar Tutorial-Videos angeschaut und dann machte vieles plötzlich Sinn. Die Logik hinter der Software ist eigentlich ganz gut durchdacht, man muss sie nur erstmal verstehen.
-
-Interviewer: Was würden Sie anderen Nutzern empfehlen?
-
-Teilnehmer: Definitiv die Tutorials anschauen, bevor man anfängt. Und vielleicht sollte die Software selbst einen besseren Onboarding-Prozess haben. So ein geführtes Tutorial direkt in der Anwendung wäre hilfreich gewesen.
-
-Interviewer: Gibt es bestimmte Funktionen, die Sie besonders positiv oder negativ bewerten?
-
-Teilnehmer: Die Suchfunktion ist fantastisch. Ich kann alles sehr schnell finden. Aber die Export-Funktion ist umständlich - man muss durch mehrere Menüs navigieren, was unnötig kompliziert ist.
-
-Interviewer: Vielen Dank für das Gespräch.
-
-Teilnehmer: Gerne.`,
-  projectId: 'proj-1',
-  wordCount: 245,
-  createdAt: '2024-01-15T10:00:00Z',
+interface ViewerCode {
+  id: string
+  name: string
+  description?: string
+  color: string
+  parentId?: string | null
 }
-
-const mockCodes: Code[] = [
-  { id: 'code-1', name: 'Erste Eindrücke', color: '#f59e0b' },
-  { id: 'code-2', name: 'Negative Emotion', color: '#ef4444' },
-  { id: 'code-3', name: 'Positive Emotion', color: '#22c55e' },
-  { id: 'code-4', name: 'Lernprozess', color: '#3b82f6' },
-  { id: 'code-5', name: 'Verbesserungsvorschlag', color: '#8b5cf6' },
-  { id: 'code-6', name: 'Feature-Bewertung', color: '#06b6d4' },
-]
-
-const mockCodings: Coding[] = [
-  {
-    id: 'coding-1',
-    codeId: 'code-1',
-    codeName: 'Erste Eindrücke',
-    color: '#f59e0b',
-    startOffset: 147,
-    endOffset: 286,
-    selectedText: 'Die Oberfläche sah sehr komplex aus, mit vielen Buttons und Menüs. Ich wusste nicht, wo ich anfangen sollte.',
-  },
-  {
-    id: 'coding-2',
-    codeId: 'code-2',
-    codeName: 'Negative Emotion',
-    color: '#ef4444',
-    startOffset: 338,
-    endOffset: 348,
-    selectedText: 'Frustriert',
-  },
-]
 
 export default function DocumentDetailPage() {
   const { projectId, documentId } = useParams()
-  const [document] = useState(mockDocument)
-  const [codes, setCodes] = useState<Code[]>(mockCodes)
-  const [codings, setCodings] = useState<Coding[]>(mockCodings)
+  const {
+    currentProject,
+    currentDocument,
+    codes,
+    codings,
+    isLoading,
+    isLoadingCodes,
+    isLoadingCodings,
+    error,
+    fetchProject,
+    fetchDocument,
+    fetchCodes,
+    fetchCodings,
+    createCode,
+    updateCode,
+    deleteCode,
+    createCoding,
+    deleteCoding,
+    createCodingsBatch,
+  } = useProjectStore()
+
   const [showAICoding, setShowAICoding] = useState(false)
   const [isAIProcessing, setIsAIProcessing] = useState(false)
   const [aiProgress, setAIProgress] = useState(0)
   const [aiStatus, setAIStatus] = useState('')
   const [aiError, setAIError] = useState<string | null>(null)
 
-  const handleAddCoding = (coding: Omit<Coding, 'id'>) => {
-    const newCoding: Coding = {
-      ...coding,
-      id: `coding-${Date.now()}`,
+  // Fetch data on mount
+  useEffect(() => {
+    if (projectId) {
+      fetchProject(projectId)
+      fetchCodes(projectId)
     }
-    setCodings([...codings, newCoding])
-  }
-
-  const handleRemoveCoding = (codingId: string) => {
-    setCodings(codings.filter((c) => c.id !== codingId))
-  }
-
-  const handleAddCode = (code: Omit<Code, 'id'>) => {
-    const newCode: Code = {
-      ...code,
-      id: `code-${Date.now()}`,
+    if (documentId) {
+      fetchDocument(documentId)
+      fetchCodings(documentId)
     }
-    setCodes([...codes, newCode])
+  }, [projectId, documentId, fetchProject, fetchDocument, fetchCodes, fetchCodings])
+
+  // Convert store data to viewer format
+  const viewerCodes: ViewerCode[] = codes.map((code) => ({
+    id: code.id,
+    name: code.name,
+    description: code.description || undefined,
+    color: code.color,
+    parentId: code.parentId,
+  }))
+
+  const viewerCodings: ViewerCoding[] = codings.map((coding) => {
+    const code = codes.find((c) => c.id === coding.codeId)
+    return {
+      id: coding.id,
+      codeId: coding.codeId,
+      codeName: code?.name || 'Unknown',
+      color: code?.color || '#888888',
+      startOffset: coding.startOffset,
+      endOffset: coding.endOffset,
+      selectedText: coding.selectedText,
+      memo: coding.memo || undefined,
+    }
+  })
+
+  const handleAddCoding = async (coding: Omit<ViewerCoding, 'id'>) => {
+    if (!documentId) return
+
+    await createCoding({
+      documentId,
+      codeId: coding.codeId,
+      startOffset: coding.startOffset,
+      endOffset: coding.endOffset,
+      selectedText: coding.selectedText,
+      memo: coding.memo,
+      codingMethod: 'manual',
+    })
   }
 
-  const handleUpdateCode = (id: string, updates: Partial<Code>) => {
-    setCodes(codes.map((c) => (c.id === id ? { ...c, ...updates } : c)))
-    // Also update any codings using this code
-    setCodings(codings.map((c) => {
-      if (c.codeId === id) {
-        return {
-          ...c,
-          codeName: updates.name || c.codeName,
-          color: updates.color || c.color,
-        }
-      }
-      return c
-    }))
+  const handleRemoveCoding = async (codingId: string) => {
+    await deleteCoding(codingId)
   }
 
-  const handleDeleteCode = (id: string) => {
-    setCodes(codes.filter((c) => c.id !== id))
-    setCodings(codings.filter((c) => c.codeId !== id))
+  const handleAddCode = async (code: Omit<ViewerCode, 'id'>) => {
+    if (!projectId) return
+
+    await createCode({
+      projectId,
+      name: code.name,
+      description: code.description,
+      color: code.color,
+      parentId: code.parentId || undefined,
+    })
+  }
+
+  const handleUpdateCode = async (id: string, updates: Partial<ViewerCode>) => {
+    await updateCode(id, {
+      name: updates.name,
+      description: updates.description,
+      color: updates.color,
+      parentId: updates.parentId || undefined,
+    })
+  }
+
+  const handleDeleteCode = async (id: string) => {
+    await deleteCode(id)
   }
 
   const handleStartAICoding = async (method: string) => {
+    if (!currentDocument || !projectId || !documentId) return
+
     setIsAIProcessing(true)
     setAIProgress(0)
     setAIStatus('Initialisiere...')
@@ -155,13 +153,13 @@ export default function DocumentDetailPage() {
       // Convert existing codes to the format expected by the API
       const existingCodesForAPI = codes.map((code) => ({
         name: code.name,
-        description: code.description,
+        description: code.description || undefined,
         color: code.color,
       }))
 
       // Run the actual AI coding
       const result = await runAICoding(
-        document.content,
+        currentDocument.content || '',
         method as CodingMethod,
         existingCodesForAPI,
         (progress, status) => {
@@ -170,71 +168,88 @@ export default function DocumentDetailPage() {
         }
       )
 
-      // Process the results and create codings
-      const newCodings: Coding[] = []
-      const newCodes: Code[] = []
+      // Process the results
+      const codingsToCreate: {
+        documentId: string
+        codeId: string
+        startOffset: number
+        endOffset: number
+        selectedText: string
+        memo?: string
+        codingMethod: string
+      }[] = []
 
-      // First, add any suggested codes that don't exist yet
-      result.suggestedCodes.forEach((suggestedCode, index) => {
-        const exists = codes.find(
-          (c) => c.name.toLowerCase() === suggestedCode.name.toLowerCase()
-        )
-        if (!exists && !newCodes.find(c => c.name.toLowerCase() === suggestedCode.name.toLowerCase())) {
-          newCodes.push({
-            id: `code-ai-${Date.now()}-${index}`,
+      // First, create any new codes
+      const codeIdMap = new Map<string, string>() // Map from code name to code ID
+
+      // Map existing codes
+      codes.forEach((code) => {
+        codeIdMap.set(code.name.toLowerCase(), code.id)
+      })
+
+      // Create new codes from suggested codes
+      for (const suggestedCode of result.suggestedCodes) {
+        const existingId = codeIdMap.get(suggestedCode.name.toLowerCase())
+        if (!existingId) {
+          const newCode = await createCode({
+            projectId,
             name: suggestedCode.name,
             description: suggestedCode.description,
             color: suggestedCode.color,
           })
+          if (newCode) {
+            codeIdMap.set(suggestedCode.name.toLowerCase(), newCode.id)
+          }
         }
-      })
+      }
 
-      // Now process the codings
-      result.codings.forEach((aiCoding, index) => {
-        // Find or create the code for this coding
-        let matchingCode = codes.find(
-          (c) => c.name.toLowerCase() === aiCoding.codeName.toLowerCase()
-        ) || newCodes.find(
-          (c) => c.name.toLowerCase() === aiCoding.codeName.toLowerCase()
-        )
+      // Create codes from codings if they don't exist
+      for (const aiCoding of result.codings) {
+        let codeId = codeIdMap.get(aiCoding.codeName.toLowerCase())
 
-        if (!matchingCode) {
-          // Create new code if it doesn't exist
-          matchingCode = {
-            id: `code-ai-${Date.now()}-new-${index}`,
+        if (!codeId) {
+          // Create new code
+          const suggestedColor = result.suggestedCodes.find(
+            (s) => s.name.toLowerCase() === aiCoding.codeName.toLowerCase()
+          )?.color || '#3b82f6'
+
+          const newCode = await createCode({
+            projectId,
             name: aiCoding.codeName,
             description: aiCoding.codeDescription,
-            color: result.suggestedCodes.find(s => s.name === aiCoding.codeName)?.color ||
-                   ['#f59e0b', '#ef4444', '#22c55e', '#3b82f6', '#8b5cf6', '#06b6d4'][index % 6],
+            color: suggestedColor,
+          })
+
+          if (newCode) {
+            codeId = newCode.id
+            codeIdMap.set(aiCoding.codeName.toLowerCase(), codeId)
           }
-          newCodes.push(matchingCode)
         }
 
-        // Create the coding entry
-        if (aiCoding.startOffset >= 0) {
-          newCodings.push({
-            id: `ai-coding-${Date.now()}-${index}`,
-            codeId: matchingCode.id,
-            codeName: matchingCode.name,
-            color: matchingCode.color,
+        // Add to codings to create
+        if (codeId && aiCoding.startOffset >= 0) {
+          codingsToCreate.push({
+            documentId,
+            codeId,
             startOffset: aiCoding.startOffset,
             endOffset: aiCoding.endOffset,
             selectedText: aiCoding.selectedText,
             memo: aiCoding.reasoning,
+            codingMethod: method,
           })
         }
-      })
+      }
 
-      // Update state
-      if (newCodes.length > 0) {
-        setCodes((prev) => [...prev, ...newCodes])
+      // Create all codings in batch
+      if (codingsToCreate.length > 0) {
+        await createCodingsBatch(codingsToCreate)
       }
-      if (newCodings.length > 0) {
-        setCodings((prev) => [...prev, ...newCodings])
-      }
+
+      // Refresh codings
+      await fetchCodings(documentId)
 
       setAIProgress(100)
-      setAIStatus(`Fertig! ${newCodings.length} Kodierungen gefunden.`)
+      setAIStatus(`Fertig! ${codingsToCreate.length} Kodierungen erstellt.`)
 
       // Close panel after a short delay
       setTimeout(() => {
@@ -252,28 +267,51 @@ export default function DocumentDetailPage() {
     }
   }
 
+  // Loading state
+  if (isLoading || !currentDocument) {
+    return (
+      <Layout>
+        <div className="p-6 lg:p-8 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-surface-400">Dokument wird geladen...</p>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
       <div className="p-6 lg:p-8">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
+            {error}
+          </div>
+        )}
+
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-surface-400 mb-4">
           <Link to="/" className="hover:text-surface-100">Dashboard</Link>
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          <Link to={`/project/${projectId}`} className="hover:text-surface-100">Projekt</Link>
+          <Link to={`/project/${projectId}`} className="hover:text-surface-100">
+            {currentProject?.name || 'Projekt'}
+          </Link>
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          <span className="text-surface-100">{document.name}</span>
+          <span className="text-surface-100">{currentDocument.name}</span>
         </div>
 
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-surface-100">{document.name}</h1>
+            <h1 className="text-2xl font-bold text-surface-100">{currentDocument.name}</h1>
             <p className="text-surface-400 mt-1">
-              {document.wordCount} Wörter · {codings.length} Kodierungen
+              {currentDocument.wordCount} Wörter · {codings.length} Kodierungen
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -298,47 +336,67 @@ export default function DocumentDetailPage() {
         {/* Main Content */}
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
           {/* Document Viewer */}
-          <DocumentViewer
-            content={document.content}
-            codings={codings}
-            codes={codes}
-            onAddCoding={handleAddCoding}
-            onRemoveCoding={handleRemoveCoding}
-          />
+          {isLoadingCodings ? (
+            <div className="bg-surface-900 rounded-xl border border-surface-800 p-8 flex items-center justify-center min-h-[400px]">
+              <div className="text-center">
+                <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-surface-400">Kodierungen werden geladen...</p>
+              </div>
+            </div>
+          ) : (
+            <DocumentViewer
+              content={currentDocument.content || ''}
+              codings={viewerCodings}
+              codes={viewerCodes}
+              onAddCoding={handleAddCoding}
+              onRemoveCoding={handleRemoveCoding}
+            />
+          )}
 
           {/* Sidebar */}
           <div className="space-y-4">
-            <CodeManager
-              codes={codes}
-              onAddCode={handleAddCode}
-              onUpdateCode={handleUpdateCode}
-              onDeleteCode={handleDeleteCode}
-            />
+            {isLoadingCodes ? (
+              <div className="bg-surface-900 rounded-xl border border-surface-800 p-4 text-center">
+                <div className="w-6 h-6 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-surface-400 text-sm">Codes laden...</p>
+              </div>
+            ) : (
+              <CodeManager
+                codes={viewerCodes}
+                onAddCode={handleAddCode}
+                onUpdateCode={handleUpdateCode}
+                onDeleteCode={handleDeleteCode}
+              />
+            )}
 
             {/* Coding Stats */}
             <div className="bg-surface-900 rounded-xl border border-surface-800 p-4">
               <h3 className="font-medium text-surface-100 mb-3">Statistik</h3>
               <div className="space-y-2">
-                {codes.map((code) => {
-                  const count = codings.filter((c) => c.codeId === code.id).length
-                  const percentage = codings.length > 0 ? (count / codings.length) * 100 : 0
-                  return (
-                    <div key={code.id} className="flex items-center gap-2">
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: code.color }}
-                      />
-                      <span className="flex-1 text-sm text-surface-300 truncate">{code.name}</span>
-                      <span className="text-xs text-surface-500">{count}</span>
-                      <div className="w-16 h-1.5 bg-surface-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${percentage}%`, backgroundColor: code.color }}
+                {viewerCodes.length === 0 ? (
+                  <p className="text-sm text-surface-500">Noch keine Codes vorhanden</p>
+                ) : (
+                  viewerCodes.map((code) => {
+                    const count = viewerCodings.filter((c) => c.codeId === code.id).length
+                    const percentage = viewerCodings.length > 0 ? (count / viewerCodings.length) * 100 : 0
+                    return (
+                      <div key={code.id} className="flex items-center gap-2">
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: code.color }}
                         />
+                        <span className="flex-1 text-sm text-surface-300 truncate">{code.name}</span>
+                        <span className="text-xs text-surface-500">{count}</span>
+                        <div className="w-16 h-1.5 bg-surface-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${percentage}%`, backgroundColor: code.color }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -347,8 +405,8 @@ export default function DocumentDetailPage() {
         {/* AI Coding Panel */}
         {showAICoding && (
           <AICodingPanel
-            documentId={document.id}
-            documentName={document.name}
+            documentId={currentDocument.id}
+            documentName={currentDocument.name}
             onStartCoding={handleStartAICoding}
             onClose={() => !isAIProcessing && setShowAICoding(false)}
             isProcessing={isAIProcessing}
