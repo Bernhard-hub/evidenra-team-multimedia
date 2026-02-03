@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Layout from '@/components/Layout'
+import IRRPanel from '@/components/IRRPanel'
+import ActivityFeed from '@/components/ActivityFeed'
+import ExportModal from '@/components/ExportModal'
 
 interface Document {
   id: string
@@ -47,6 +50,7 @@ export default function ProjectPage() {
   const [activeTab, setActiveTab] = useState<TabType>('documents')
   const [documents] = useState<Document[]>(mockDocuments)
   const [codes] = useState<Code[]>(mockCodes)
+  const [showExportModal, setShowExportModal] = useState(false)
 
   const tabs: { id: TabType; name: string; count?: number }[] = [
     { id: 'documents', name: 'Dokumente', count: documents.length },
@@ -74,7 +78,10 @@ export default function ProjectPage() {
             <p className="text-surface-400 mt-1">Qualitative Interviews zur Nutzererfahrung</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2">
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
+            >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
@@ -127,6 +134,20 @@ export default function ProjectPage() {
           <AnalysisTab codes={codes} />
         )}
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          projectName="Interview-Studie 2024"
+          documentCount={documents.length}
+          codingCount={codes.reduce((sum, c) => sum + c.frequency, 0)}
+          onExport={(format, options) => {
+            console.log('Export:', format, options)
+            alert(`Export als ${format.toUpperCase()} gestartet!`)
+          }}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
     </Layout>
   )
 }
@@ -356,6 +377,20 @@ function AnalysisTab({ codes }: { codes: Code[] }) {
   const sortedCodes = [...codes].sort((a, b) => b.frequency - a.frequency).slice(0, 5)
   const maxFrequency = Math.max(...codes.map((c) => c.frequency))
 
+  const mockCoders = [
+    { id: 'c1', name: 'Anna Müller', codingCount: 87 },
+    { id: 'c2', name: 'Max Koch', codingCount: 64 },
+    { id: 'c3', name: 'Lisa Schmidt', codingCount: 52 },
+  ]
+
+  const mockActivities = [
+    { id: 'a1', userId: 'c1', userName: 'Anna Müller', userColor: '#f59e0b', action: 'coding_added' as const, target: 'Nutzererfahrung', createdAt: new Date(Date.now() - 300000).toISOString() },
+    { id: 'a2', userId: 'c2', userName: 'Max Koch', userColor: '#3b82f6', action: 'code_created' as const, target: 'Frustration', createdAt: new Date(Date.now() - 900000).toISOString() },
+    { id: 'a3', userId: 'c3', userName: 'Lisa Schmidt', userColor: '#22c55e', action: 'comment_added' as const, createdAt: new Date(Date.now() - 1800000).toISOString() },
+    { id: 'a4', userId: 'c1', userName: 'Anna Müller', userColor: '#f59e0b', action: 'document_added' as const, target: 'Interview_004.txt', createdAt: new Date(Date.now() - 3600000).toISOString() },
+    { id: 'a5', userId: 'c2', userName: 'Max Koch', userColor: '#3b82f6', action: 'coding_added' as const, target: 'Lernprozess', createdAt: new Date(Date.now() - 7200000).toISOString() },
+  ]
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Code Frequency Chart */}
@@ -382,41 +417,41 @@ function AnalysisTab({ codes }: { codes: Code[] }) {
         </div>
       </div>
 
-      {/* IRR Placeholder */}
+      {/* IRR Panel */}
+      <IRRPanel
+        coders={mockCoders}
+        onCalculate={(metric, coderIds) => ({
+          metric,
+          value: 0.75,
+          interpretation: 'Substantial',
+        })}
+      />
+
+      {/* AI Coding Summary */}
       <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
-        <h3 className="text-lg font-semibold text-surface-100 mb-4">Inter-Rater-Reliabilität</h3>
-        <div className="flex items-center justify-center h-48 text-surface-500">
-          <div className="text-center">
-            <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            <p className="text-sm">Mind. 2 Kodierer erforderlich</p>
+        <h3 className="text-lg font-semibold text-surface-100 mb-4">AI-Kodierung</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 rounded-lg bg-surface-800">
+            <p className="text-2xl font-bold text-primary-400">4</p>
+            <p className="text-sm text-surface-400">Methoden</p>
+          </div>
+          <div className="p-4 rounded-lg bg-surface-800">
+            <p className="text-2xl font-bold text-green-400">87%</p>
+            <p className="text-sm text-surface-400">Konsensrate</p>
+          </div>
+          <div className="p-4 rounded-lg bg-surface-800">
+            <p className="text-2xl font-bold text-blue-400">3</p>
+            <p className="text-sm text-surface-400">Personas</p>
+          </div>
+          <div className="p-4 rounded-lg bg-surface-800">
+            <p className="text-2xl font-bold text-purple-400">0.82</p>
+            <p className="text-sm text-surface-400">Fleiss' κ</p>
           </div>
         </div>
       </div>
 
-      {/* AI Coding Summary */}
-      <div className="bg-surface-900 rounded-xl border border-surface-800 p-6 lg:col-span-2">
-        <h3 className="text-lg font-semibold text-surface-100 mb-4">AI-Kodierung</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-2xl font-bold text-primary-400">4</p>
-            <p className="text-sm text-surface-400">Kodierungsmethoden</p>
-          </div>
-          <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-2xl font-bold text-green-400">87%</p>
-            <p className="text-sm text-surface-400">Ø Konsensrate</p>
-          </div>
-          <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-2xl font-bold text-blue-400">3</p>
-            <p className="text-sm text-surface-400">Experten-Personas</p>
-          </div>
-          <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-2xl font-bold text-purple-400">0.82</p>
-            <p className="text-sm text-surface-400">Fleiss' Kappa</p>
-          </div>
-        </div>
-      </div>
+      {/* Activity Feed */}
+      <ActivityFeed activities={mockActivities} maxItems={5} />
     </div>
   )
 }
