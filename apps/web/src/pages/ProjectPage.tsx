@@ -1,0 +1,422 @@
+import { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import Layout from '@/components/Layout'
+
+interface Document {
+  id: string
+  name: string
+  type: 'transcript' | 'note' | 'media'
+  createdAt: string
+  wordCount: number
+  codeCount: number
+  lastCoderId?: string
+  lastCoderName?: string
+}
+
+interface Code {
+  id: string
+  name: string
+  color: string
+  frequency: number
+  parentId?: string
+}
+
+// Mock data
+const mockDocuments: Document[] = [
+  { id: '1', name: 'Interview_001_Schmidt.txt', type: 'transcript', createdAt: '2024-01-15', wordCount: 3420, codeCount: 24, lastCoderName: 'Anna M.' },
+  { id: '2', name: 'Interview_002_Mueller.txt', type: 'transcript', createdAt: '2024-01-16', wordCount: 2890, codeCount: 18, lastCoderName: 'Max K.' },
+  { id: '3', name: 'Feldnotizen_Workshop.md', type: 'note', createdAt: '2024-01-17', wordCount: 1250, codeCount: 12 },
+  { id: '4', name: 'Interview_003_Weber.txt', type: 'transcript', createdAt: '2024-01-18', wordCount: 4100, codeCount: 31, lastCoderName: 'Anna M.' },
+  { id: '5', name: 'Fokusgruppe_Audio.mp3', type: 'media', createdAt: '2024-01-19', wordCount: 0, codeCount: 0 },
+]
+
+const mockCodes: Code[] = [
+  { id: '1', name: 'Nutzererfahrung', color: '#f59e0b', frequency: 45 },
+  { id: '2', name: 'Positive Aspekte', color: '#22c55e', frequency: 23, parentId: '1' },
+  { id: '3', name: 'Negative Aspekte', color: '#ef4444', frequency: 18, parentId: '1' },
+  { id: '4', name: 'Verbesserungsvorschläge', color: '#3b82f6', frequency: 28 },
+  { id: '5', name: 'UI/UX', color: '#8b5cf6', frequency: 15, parentId: '4' },
+  { id: '6', name: 'Funktionen', color: '#06b6d4', frequency: 12, parentId: '4' },
+  { id: '7', name: 'Emotionen', color: '#ec4899', frequency: 34 },
+]
+
+type TabType = 'documents' | 'codes' | 'team' | 'analysis'
+
+export default function ProjectPage() {
+  const { projectId } = useParams()
+  const [activeTab, setActiveTab] = useState<TabType>('documents')
+  const [documents] = useState<Document[]>(mockDocuments)
+  const [codes] = useState<Code[]>(mockCodes)
+
+  const tabs: { id: TabType; name: string; count?: number }[] = [
+    { id: 'documents', name: 'Dokumente', count: documents.length },
+    { id: 'codes', name: 'Codes', count: codes.length },
+    { id: 'team', name: 'Team', count: 4 },
+    { id: 'analysis', name: 'Analyse' },
+  ]
+
+  return (
+    <Layout>
+      <div className="p-6 lg:p-8">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-surface-400 mb-4">
+          <Link to="/" className="hover:text-surface-100">Dashboard</Link>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <span className="text-surface-100">Interview-Studie 2024</span>
+        </div>
+
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-surface-100">Interview-Studie 2024</h1>
+            <p className="text-surface-400 mt-1">Qualitative Interviews zur Nutzererfahrung</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Export
+            </button>
+            <button className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              AI Kodieren
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-surface-800 mb-6">
+          <nav className="flex gap-6">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-primary-500 text-primary-400'
+                    : 'border-transparent text-surface-400 hover:text-surface-100'
+                }`}
+              >
+                {tab.name}
+                {tab.count !== undefined && (
+                  <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-surface-800">
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'documents' && (
+          <DocumentsTab documents={documents} />
+        )}
+        {activeTab === 'codes' && (
+          <CodesTab codes={codes} />
+        )}
+        {activeTab === 'team' && (
+          <TeamTab />
+        )}
+        {activeTab === 'analysis' && (
+          <AnalysisTab codes={codes} />
+        )}
+      </div>
+    </Layout>
+  )
+}
+
+function DocumentsTab({ documents }: { documents: Document[] }) {
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3">
+        <button className="px-4 py-2 rounded-lg border border-dashed border-surface-700 text-surface-400 hover:border-primary-500 hover:text-primary-400 text-sm flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Dokument hinzufügen
+        </button>
+      </div>
+
+      {/* Document List */}
+      <div className="bg-surface-900 rounded-xl border border-surface-800 overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-surface-800 text-left">
+              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider">Name</th>
+              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider hidden md:table-cell">Typ</th>
+              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider hidden lg:table-cell">Wörter</th>
+              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider">Codes</th>
+              <th className="px-4 py-3 text-xs font-medium text-surface-500 uppercase tracking-wider hidden md:table-cell">Zuletzt kodiert</th>
+              <th className="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-surface-800">
+            {documents.map((doc) => (
+              <tr key={doc.id} className="hover:bg-surface-800/50 transition-colors">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <DocumentIcon type={doc.type} />
+                    <span className="text-sm text-surface-100">{doc.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 hidden md:table-cell">
+                  <span className="text-xs text-surface-400 capitalize">{doc.type}</span>
+                </td>
+                <td className="px-4 py-3 hidden lg:table-cell">
+                  <span className="text-sm text-surface-400">{doc.wordCount.toLocaleString()}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`text-sm ${doc.codeCount > 0 ? 'text-primary-400' : 'text-surface-500'}`}>
+                    {doc.codeCount}
+                  </span>
+                </td>
+                <td className="px-4 py-3 hidden md:table-cell">
+                  {doc.lastCoderName ? (
+                    <span className="text-sm text-surface-400">{doc.lastCoderName}</span>
+                  ) : (
+                    <span className="text-sm text-surface-600">-</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <button className="p-1 rounded hover:bg-surface-700 text-surface-400">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function DocumentIcon({ type }: { type: Document['type'] }) {
+  if (type === 'media') {
+    return (
+      <div className="w-8 h-8 rounded bg-purple-500/10 flex items-center justify-center">
+        <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+        </svg>
+      </div>
+    )
+  }
+  if (type === 'note') {
+    return (
+      <div className="w-8 h-8 rounded bg-blue-500/10 flex items-center justify-center">
+        <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      </div>
+    )
+  }
+  return (
+    <div className="w-8 h-8 rounded bg-primary-500/10 flex items-center justify-center">
+      <svg className="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    </div>
+  )
+}
+
+function CodesTab({ codes }: { codes: Code[] }) {
+  const rootCodes = codes.filter((c) => !c.parentId)
+
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3">
+        <button className="px-4 py-2 rounded-lg border border-dashed border-surface-700 text-surface-400 hover:border-primary-500 hover:text-primary-400 text-sm flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Neuer Code
+        </button>
+      </div>
+
+      {/* Code Tree */}
+      <div className="bg-surface-900 rounded-xl border border-surface-800 p-4">
+        <div className="space-y-2">
+          {rootCodes.map((code) => (
+            <CodeItem key={code.id} code={code} codes={codes} level={0} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CodeItem({ code, codes, level }: { code: Code; codes: Code[]; level: number }) {
+  const [expanded, setExpanded] = useState(true)
+  const children = codes.filter((c) => c.parentId === code.id)
+
+  return (
+    <div>
+      <div
+        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-surface-800 group"
+        style={{ paddingLeft: `${8 + level * 20}px` }}
+      >
+        {children.length > 0 ? (
+          <button onClick={() => setExpanded(!expanded)} className="p-0.5">
+            <svg
+              className={`w-4 h-4 text-surface-500 transition-transform ${expanded ? 'rotate-90' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        ) : (
+          <span className="w-5" />
+        )}
+        <span
+          className="w-3 h-3 rounded-sm"
+          style={{ backgroundColor: code.color }}
+        />
+        <span className="flex-1 text-sm text-surface-100">{code.name}</span>
+        <span className="text-xs text-surface-500 bg-surface-800 px-1.5 py-0.5 rounded">
+          {code.frequency}
+        </span>
+      </div>
+      {expanded && children.length > 0 && (
+        <div>
+          {children.map((child) => (
+            <CodeItem key={child.id} code={child} codes={codes} level={level + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TeamTab() {
+  const members = [
+    { id: '1', name: 'Anna Müller', email: 'anna@example.com', role: 'admin', isOnline: true },
+    { id: '2', name: 'Max Koch', email: 'max@example.com', role: 'coder', isOnline: true },
+    { id: '3', name: 'Lisa Schmidt', email: 'lisa@example.com', role: 'reviewer', isOnline: false },
+    { id: '4', name: 'Tom Weber', email: 'tom@example.com', role: 'viewer', isOnline: false },
+  ]
+
+  const roleLabels: Record<string, string> = {
+    admin: 'Admin',
+    coder: 'Kodierer',
+    reviewer: 'Reviewer',
+    viewer: 'Betrachter',
+  }
+
+  return (
+    <div className="space-y-4">
+      <button className="px-4 py-2 rounded-lg border border-dashed border-surface-700 text-surface-400 hover:border-primary-500 hover:text-primary-400 text-sm flex items-center gap-2">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+        </svg>
+        Mitglied einladen
+      </button>
+
+      <div className="bg-surface-900 rounded-xl border border-surface-800 divide-y divide-surface-800">
+        {members.map((member) => (
+          <div key={member.id} className="flex items-center gap-4 p-4">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center">
+                <span className="text-sm font-medium text-primary-400">
+                  {member.name.split(' ').map((n) => n[0]).join('')}
+                </span>
+              </div>
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-surface-900 ${
+                  member.isOnline ? 'bg-green-500' : 'bg-surface-600'
+                }`}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-surface-100">{member.name}</p>
+              <p className="text-xs text-surface-500">{member.email}</p>
+            </div>
+            <span className="px-2 py-1 rounded text-xs font-medium bg-surface-800 text-surface-400">
+              {roleLabels[member.role]}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function AnalysisTab({ codes }: { codes: Code[] }) {
+  const sortedCodes = [...codes].sort((a, b) => b.frequency - a.frequency).slice(0, 5)
+  const maxFrequency = Math.max(...codes.map((c) => c.frequency))
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      {/* Code Frequency Chart */}
+      <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
+        <h3 className="text-lg font-semibold text-surface-100 mb-4">Code-Häufigkeit</h3>
+        <div className="space-y-3">
+          {sortedCodes.map((code) => (
+            <div key={code.id} className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-surface-300">{code.name}</span>
+                <span className="text-surface-500">{code.frequency}</span>
+              </div>
+              <div className="h-2 bg-surface-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${(code.frequency / maxFrequency) * 100}%`,
+                    backgroundColor: code.color,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* IRR Placeholder */}
+      <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
+        <h3 className="text-lg font-semibold text-surface-100 mb-4">Inter-Rater-Reliabilität</h3>
+        <div className="flex items-center justify-center h-48 text-surface-500">
+          <div className="text-center">
+            <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <p className="text-sm">Mind. 2 Kodierer erforderlich</p>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Coding Summary */}
+      <div className="bg-surface-900 rounded-xl border border-surface-800 p-6 lg:col-span-2">
+        <h3 className="text-lg font-semibold text-surface-100 mb-4">AI-Kodierung</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="p-4 rounded-lg bg-surface-800">
+            <p className="text-2xl font-bold text-primary-400">4</p>
+            <p className="text-sm text-surface-400">Kodierungsmethoden</p>
+          </div>
+          <div className="p-4 rounded-lg bg-surface-800">
+            <p className="text-2xl font-bold text-green-400">87%</p>
+            <p className="text-sm text-surface-400">Ø Konsensrate</p>
+          </div>
+          <div className="p-4 rounded-lg bg-surface-800">
+            <p className="text-2xl font-bold text-blue-400">3</p>
+            <p className="text-sm text-surface-400">Experten-Personas</p>
+          </div>
+          <div className="p-4 rounded-lg bg-surface-800">
+            <p className="text-2xl font-bold text-purple-400">0.82</p>
+            <p className="text-sm text-surface-400">Fleiss' Kappa</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

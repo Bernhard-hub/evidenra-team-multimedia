@@ -1,0 +1,5 @@
+export { default as LoginPage } from './LoginPage'
+export { default as DashboardPage } from './DashboardPage'
+export { default as ProjectPage } from './ProjectPage'
+export { default as TeamPage } from './TeamPage'
+export { default as SettingsPage } from './SettingsPage'
