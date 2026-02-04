@@ -1,18 +1,14 @@
 import { useState } from 'react'
-
-interface Code {
-  id: string
-  name: string
-  description?: string
-  color: string
-  parentId?: string | null
-}
+import DraggableCodeTree from './DraggableCodeTree'
+import type { Code } from '@/stores/projectStore'
 
 interface CodeManagerProps {
   codes: Code[]
-  onAddCode: (code: Omit<Code, 'id'>) => void
-  onUpdateCode: (id: string, updates: Partial<Code>) => void
-  onDeleteCode: (id: string) => void
+  onAddCode: (code: Omit<Code, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>) => void
+  onUpdateCode: (id: string, updates: Partial<Code>) => Promise<void>
+  onDeleteCode: (id: string) => Promise<void>
+  selectedCodeId?: string
+  onSelectCode?: (codeId: string) => void
 }
 
 const COLORS = [
@@ -25,12 +21,12 @@ export default function CodeManager({
   onAddCode,
   onUpdateCode,
   onDeleteCode,
+  selectedCodeId,
+  onSelectCode,
 }: CodeManagerProps) {
   const [isAdding, setIsAdding] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingCode, setEditingCode] = useState<Code | null>(null)
   const [newCode, setNewCode] = useState({ name: '', description: '', color: COLORS[0] })
-
-  const rootCodes = codes.filter((c) => !c.parentId)
 
   const handleAddCode = () => {
     if (!newCode.name.trim()) return
@@ -46,68 +42,15 @@ export default function CodeManager({
     setIsAdding(false)
   }
 
-  const renderCode = (code: Code, level: number = 0) => {
-    const children = codes.filter((c) => c.parentId === code.id)
-    const isEditing = editingId === code.id
+  const handleEditCode = (code: Code) => {
+    setEditingCode(code)
+  }
 
-    return (
-      <div key={code.id}>
-        <div
-          className="group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-800 transition-colors"
-          style={{ paddingLeft: `${12 + level * 20}px` }}
-        >
-          {isEditing ? (
-            <EditCodeForm
-              code={code}
-              onSave={(updates) => {
-                onUpdateCode(code.id, updates)
-                setEditingId(null)
-              }}
-              onCancel={() => setEditingId(null)}
-            />
-          ) : (
-            <>
-              <span
-                className="w-4 h-4 rounded flex-shrink-0 cursor-pointer"
-                style={{ backgroundColor: code.color }}
-                onClick={() => setEditingId(code.id)}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-surface-100 truncate">{code.name}</p>
-                {code.description && (
-                  <p className="text-xs text-surface-500 truncate">{code.description}</p>
-                )}
-              </div>
-              <div className="hidden group-hover:flex items-center gap-1">
-                <button
-                  onClick={() => setEditingId(code.id)}
-                  className="p-1 rounded hover:bg-surface-700 text-surface-400"
-                  title="Bearbeiten"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm(`Code "${code.name}" wirklich löschen?`)) {
-                      onDeleteCode(code.id)
-                    }
-                  }}
-                  className="p-1 rounded hover:bg-surface-700 text-red-400"
-                  title="Löschen"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-        {children.map((child) => renderCode(child, level + 1))}
-      </div>
-    )
+  const handleSaveEdit = async (updates: Partial<Code>) => {
+    if (editingCode) {
+      await onUpdateCode(editingCode.id, updates)
+      setEditingCode(null)
+    }
   }
 
   return (
@@ -117,6 +60,7 @@ export default function CodeManager({
         <button
           onClick={() => setIsAdding(true)}
           className="p-1.5 rounded-lg hover:bg-surface-800 text-surface-400 hover:text-surface-100"
+          title="Neuen Code hinzufügen"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -147,6 +91,13 @@ export default function CodeManager({
                 placeholder="Code-Name"
                 className="w-full px-3 py-2 rounded-lg bg-surface-700 border border-surface-600 text-surface-100 text-sm placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
                 autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddCode()
+                  if (e.key === 'Escape') {
+                    setIsAdding(false)
+                    setNewCode({ name: '', description: '', color: COLORS[0] })
+                  }
+                }}
               />
               <input
                 type="text"
@@ -154,6 +105,13 @@ export default function CodeManager({
                 onChange={(e) => setNewCode({ ...newCode, description: e.target.value })}
                 placeholder="Beschreibung (optional)"
                 className="w-full px-3 py-2 rounded-lg bg-surface-700 border border-surface-600 text-surface-100 text-sm placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddCode()
+                  if (e.key === 'Escape') {
+                    setIsAdding(false)
+                    setNewCode({ name: '', description: '', color: COLORS[0] })
+                  }
+                }}
               />
               <div className="flex gap-2">
                 <button
@@ -177,7 +135,7 @@ export default function CodeManager({
           </div>
         )}
 
-        {rootCodes.length === 0 && !isAdding ? (
+        {codes.length === 0 && !isAdding ? (
           <div className="text-center py-8 text-surface-500">
             <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -191,11 +149,30 @@ export default function CodeManager({
             </button>
           </div>
         ) : (
-          <div className="space-y-0.5">
-            {rootCodes.map((code) => renderCode(code))}
-          </div>
+          <DraggableCodeTree
+            codes={codes}
+            onUpdateCode={onUpdateCode}
+            onDeleteCode={onDeleteCode}
+            onEditCode={handleEditCode}
+            selectedCodeId={selectedCodeId}
+            onSelectCode={onSelectCode}
+          />
         )}
       </div>
+
+      {/* Edit Code Modal */}
+      {editingCode && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-surface-900 rounded-xl border border-surface-700 p-6 w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-medium text-surface-100 mb-4">Code bearbeiten</h3>
+            <EditCodeForm
+              code={editingCode}
+              onSave={handleSaveEdit}
+              onCancel={() => setEditingCode(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -213,44 +190,67 @@ function EditCodeForm({
   const [description, setDescription] = useState(code.description || '')
   const [color, setColor] = useState(code.color)
 
+  const handleSave = () => {
+    if (!name.trim()) return
+    onSave({ name: name.trim(), description: description.trim() || undefined, color })
+  }
+
   return (
-    <div className="flex-1 space-y-2">
-      <div className="flex items-center gap-2">
-        <div className="flex gap-1">
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm text-surface-400 mb-2">Farbe</label>
+        <div className="flex gap-2 flex-wrap">
           {COLORS.map((c) => (
             <button
               key={c}
               onClick={() => setColor(c)}
-              className={`w-4 h-4 rounded ${color === c ? 'ring-2 ring-white ring-offset-1 ring-offset-surface-800' : ''}`}
+              className={`w-8 h-8 rounded-lg transition-transform ${color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-surface-900 scale-110' : 'hover:scale-105'}`}
               style={{ backgroundColor: c }}
             />
           ))}
         </div>
       </div>
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="w-full px-2 py-1 rounded bg-surface-700 border border-surface-600 text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50"
-        autoFocus
-      />
-      <input
-        type="text"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Beschreibung"
-        className="w-full px-2 py-1 rounded bg-surface-700 border border-surface-600 text-surface-100 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50"
-      />
-      <div className="flex gap-2">
+
+      <div>
+        <label className="block text-sm text-surface-400 mb-2">Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSave()
+            if (e.key === 'Escape') onCancel()
+          }}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm text-surface-400 mb-2">Beschreibung (optional)</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Beschreibung des Codes..."
+          rows={3}
+          className="w-full px-3 py-2 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 resize-none"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onCancel()
+          }}
+        />
+      </div>
+
+      <div className="flex gap-3 pt-2">
         <button
           onClick={onCancel}
-          className="px-2 py-1 rounded text-xs text-surface-400 hover:text-surface-200"
+          className="flex-1 px-4 py-2 rounded-lg border border-surface-600 text-surface-300 text-sm hover:bg-surface-800 transition-colors"
         >
           Abbrechen
         </button>
         <button
-          onClick={() => onSave({ name, description: description || undefined, color })}
-          className="px-2 py-1 rounded bg-primary-500 text-white text-xs hover:bg-primary-600"
+          onClick={handleSave}
+          disabled={!name.trim()}
+          className="flex-1 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm hover:bg-primary-600 disabled:opacity-50 transition-colors"
         >
           Speichern
         </button>
