@@ -583,6 +583,7 @@ function OpenAIKeySettings() {
       </div>
     </div>
   )
+}
 
 function NotificationSettings() {
   const [emailNotifications, setEmailNotifications] = useState({
