@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Layout from '@/components/Layout'
 import IRRPanel from '@/components/IRRPanel'
@@ -10,11 +10,14 @@ import SearchPanel from '@/components/SearchPanel'
 import AnalysisDashboard from '@/components/AnalysisDashboard'
 import TeamManager from '@/components/TeamManager'
 import MemoPanel from '@/components/MemoPanel'
+import ReportGenerator from '@/components/ReportGenerator'
+import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp'
 import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 import { useMemoStore } from '@/stores/memoStore'
 import { useRealtime } from '@/hooks/useRealtime'
 import { usePresence } from '@/hooks/usePresence'
+import { useKeyboardShortcuts, type KeyboardShortcut } from '@/hooks/useKeyboardShortcuts'
 
 type TabType = 'documents' | 'codes' | 'memos' | 'team' | 'analysis'
 
@@ -40,18 +43,25 @@ export default function ProjectPage() {
   const [showNewDocument, setShowNewDocument] = useState(false)
   const [showMediaUpload, setShowMediaUpload] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [showReportGenerator, setShowReportGenerator] = useState(false)
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
 
-  // Keyboard shortcut for search (Ctrl/Cmd+K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setShowSearch(true)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  // Keyboard shortcuts
+  const shortcuts: KeyboardShortcut[] = useMemo(() => [
+    { key: 'k', ctrl: true, action: () => setShowSearch(true), description: 'Suchen', category: 'Navigation' },
+    { key: 'n', ctrl: true, action: () => setShowNewDocument(true), description: 'Neues Dokument', category: 'Erstellen' },
+    { key: 'e', ctrl: true, shift: true, action: () => setShowExportModal(true), description: 'Exportieren', category: 'Allgemein' },
+    { key: 'r', ctrl: true, shift: true, action: () => setShowReportGenerator(true), description: 'Bericht erstellen', category: 'Allgemein' },
+    { key: '?', ctrl: true, action: () => setShowShortcutsHelp(true), description: 'Shortcuts anzeigen', category: 'Hilfe' },
+    { key: '1', ctrl: true, action: () => setActiveTab('documents'), description: 'Dokumente Tab', category: 'Navigation' },
+    { key: '2', ctrl: true, action: () => setActiveTab('codes'), description: 'Codes Tab', category: 'Navigation' },
+    { key: '3', ctrl: true, action: () => setActiveTab('memos'), description: 'Memos Tab', category: 'Navigation' },
+    { key: '4', ctrl: true, action: () => setActiveTab('team'), description: 'Team Tab', category: 'Navigation' },
+    { key: '5', ctrl: true, action: () => setActiveTab('analysis'), description: 'Analyse Tab', category: 'Navigation' },
+    { key: 'Escape', action: () => { setShowSearch(false); setShowExportModal(false); setShowNewDocument(false); setShowReportGenerator(false); setShowShortcutsHelp(false) }, description: 'Dialoge schließen', category: 'Navigation' },
+  ], [])
+
+  useKeyboardShortcuts(shortcuts)
 
   // Real-time subscriptions
   useRealtime({ projectId, enabled: true })
@@ -144,13 +154,33 @@ export default function ProjectPage() {
                   <kbd className="hidden lg:inline px-1.5 py-0.5 rounded bg-surface-700 text-xs font-mono">⌘K</kbd>
                 </button>
                 <button
+                  onClick={() => setShowReportGenerator(true)}
+                  className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
+                  title="Bericht erstellen (Ctrl+Shift+R)"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="hidden lg:inline">Bericht</span>
+                </button>
+                <button
                   onClick={() => setShowExportModal(true)}
                   className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
+                  title="Exportieren (Ctrl+Shift+E)"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
-                  Export
+                  <span className="hidden lg:inline">Export</span>
+                </button>
+                <button
+                  onClick={() => setShowShortcutsHelp(true)}
+                  className="p-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800"
+                  title="Tastaturkürzel (Ctrl+?)"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </button>
                 <button className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -256,6 +286,26 @@ export default function ProjectPage() {
             onClose={() => setShowSearch(false)}
           />
         )}
+
+        {/* Report Generator */}
+        {showReportGenerator && currentProject && (
+          <ReportGenerator
+            projectName={currentProject.name}
+            documents={documents}
+            codes={codes}
+            codings={codings}
+            memos={memos}
+            onClose={() => setShowReportGenerator(false)}
+          />
+        )}
+
+        {/* Keyboard Shortcuts Help */}
+        {showShortcutsHelp && (
+          <KeyboardShortcutsHelp
+            shortcuts={shortcuts}
+            onClose={() => setShowShortcutsHelp(false)}
+          />
+        )}
       </div>
     </Layout>
   )
@@ -277,7 +327,22 @@ function DocumentUploadWrapper({ projectId, onClose }: { projectId: string; onCl
     }
   }
 
-  return <DocumentUpload onUpload={handleUpload} onClose={onClose} />
+  const handleBatchUpload = async (documents: Array<{ name: string; content: string; type: string }>) => {
+    // Upload all documents in parallel
+    await Promise.all(
+      documents.map(doc =>
+        createDocument({
+          projectId,
+          name: doc.name,
+          content: doc.content,
+          fileType: doc.type,
+        })
+      )
+    )
+    onClose()
+  }
+
+  return <DocumentUpload onUpload={handleUpload} onBatchUpload={handleBatchUpload} onClose={onClose} />
 }
 
 function MediaUploadWrapper({ projectId, onClose }: { projectId: string; onClose: () => void }) {

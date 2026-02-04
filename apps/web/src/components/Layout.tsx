@@ -1,9 +1,34 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 
 interface LayoutProps {
   children: React.ReactNode
+}
+
+// Simple offline indicator
+function OfflineIndicator() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  if (isOnline) return null
+
+  return (
+    <div className="fixed bottom-4 left-4 z-50 px-4 py-2 rounded-lg shadow-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center gap-2">
+      <div className="w-2 h-2 rounded-full bg-yellow-500" />
+      <span className="text-sm text-yellow-400">Offline</span>
+    </div>
+  )
 }
 
 const navigation = [
@@ -48,6 +73,12 @@ export default function Layout({ children }: LayoutProps) {
     signOut()
     navigate('/login')
   }
+
+  // Close sidebar on navigation
+  useEffect(() => {
+    setSidebarOpen(false)
+    setUserMenuOpen(false)
+  }, [location.pathname])
 
   return (
     <div className="min-h-screen bg-surface-950">
@@ -212,7 +243,31 @@ export default function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Page content */}
-        <main>{children}</main>
+        <main className="pb-16 md:pb-0">{children}</main>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-surface-900 border-t border-surface-800 md:hidden">
+          <div className="flex items-center justify-around">
+            {navigation.map(item => {
+              const isActive = location.pathname === item.href
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex flex-col items-center py-2 px-4 min-w-[64px] transition-colors ${
+                    isActive ? 'text-primary-400' : 'text-surface-400'
+                  }`}
+                >
+                  {item.icon}
+                  <span className="text-[10px] mt-0.5">{item.name}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </nav>
+
+        {/* Offline Indicator */}
+        <OfflineIndicator />
       </div>
     </div>
   )

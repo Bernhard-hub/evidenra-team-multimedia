@@ -3,12 +3,17 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useProjectStore } from '@/stores/projectStore'
 import Layout from '@/components/Layout'
+import ImportWizard, { type ImportedData } from '@/components/ImportWizard'
+import TemplateSelector from '@/components/TemplateSelector'
+import { type ProjectTemplate } from '@/lib/templates'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
-  const { projects, isLoading, error, fetchProjects } = useProjectStore()
+  const { projects, isLoading, error, fetchProjects, createProject } = useProjectStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewProject, setShowNewProject] = useState(false)
+  const [showImportWizard, setShowImportWizard] = useState(false)
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
 
   // Fetch projects on mount
   useEffect(() => {
@@ -110,6 +115,26 @@ export default function DashboardPage() {
                 />
               </div>
               <button
+                onClick={() => setShowImportWizard(true)}
+                className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
+                title="Projekt importieren"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span className="hidden sm:inline">Import</span>
+              </button>
+              <button
+                onClick={() => setShowTemplateSelector(true)}
+                className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
+                title="Aus Vorlage erstellen"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+                <span className="hidden lg:inline">Vorlage</span>
+              </button>
+              <button
                 onClick={() => setShowNewProject(true)}
                 className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium flex items-center gap-2"
               >
@@ -204,6 +229,46 @@ export default function DashboardPage() {
         {/* New Project Modal */}
         {showNewProject && (
           <NewProjectModal onClose={() => setShowNewProject(false)} />
+        )}
+
+        {/* Import Wizard */}
+        {showImportWizard && (
+          <ImportWizard
+            projectId="new"
+            onImport={async (data: ImportedData) => {
+              // Create a new project with imported data
+              const project = await createProject({
+                name: `Import ${new Date().toLocaleDateString('de-DE')}`,
+                description: `Importiert aus ${data.format}`,
+                organizationId: 'demo-org',
+              })
+              if (project) {
+                // TODO: Import documents, codes, codings
+                console.log('Imported data:', data)
+              }
+              setShowImportWizard(false)
+            }}
+            onClose={() => setShowImportWizard(false)}
+          />
+        )}
+
+        {/* Template Selector */}
+        {showTemplateSelector && (
+          <TemplateSelector
+            onSelect={async (template: ProjectTemplate) => {
+              const project = await createProject({
+                name: `${template.name} Projekt`,
+                description: template.description,
+                organizationId: 'demo-org',
+              })
+              if (project) {
+                // TODO: Create codes from template
+                console.log('Template selected:', template)
+              }
+              setShowTemplateSelector(false)
+            }}
+            onClose={() => setShowTemplateSelector(false)}
+          />
         )}
       </div>
     </Layout>
