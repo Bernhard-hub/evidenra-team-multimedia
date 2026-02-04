@@ -13,13 +13,15 @@ import MemoPanel from '@/components/MemoPanel'
 import ReportGenerator from '@/components/ReportGenerator'
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp'
 import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
+import NexusAIChat from '@/components/NexusAIChat'
+import DataQualityDashboard from '@/components/DataQualityDashboard'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 import { useMemoStore } from '@/stores/memoStore'
 import { useRealtime } from '@/hooks/useRealtime'
 import { usePresence } from '@/hooks/usePresence'
 import { useKeyboardShortcuts, type KeyboardShortcut } from '@/hooks/useKeyboardShortcuts'
 
-type TabType = 'documents' | 'codes' | 'memos' | 'team' | 'analysis'
+type TabType = 'documents' | 'codes' | 'memos' | 'team' | 'analysis' | 'quality'
 
 export default function ProjectPage() {
   const { projectId } = useParams()
@@ -45,6 +47,10 @@ export default function ProjectPage() {
   const [showSearch, setShowSearch] = useState(false)
   const [showReportGenerator, setShowReportGenerator] = useState(false)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
+  const [showNexusChat, setShowNexusChat] = useState(false)
+
+  // Get Claude API key from localStorage or env
+  const claudeApiKey = localStorage.getItem('claude_api_key') || import.meta.env.VITE_ANTHROPIC_API_KEY || ''
 
   // Keyboard shortcuts
   const shortcuts: KeyboardShortcut[] = useMemo(() => [
@@ -52,13 +58,15 @@ export default function ProjectPage() {
     { key: 'n', ctrl: true, action: () => setShowNewDocument(true), description: 'Neues Dokument', category: 'Erstellen' },
     { key: 'e', ctrl: true, shift: true, action: () => setShowExportModal(true), description: 'Exportieren', category: 'Allgemein' },
     { key: 'r', ctrl: true, shift: true, action: () => setShowReportGenerator(true), description: 'Bericht erstellen', category: 'Allgemein' },
+    { key: 'i', ctrl: true, shift: true, action: () => setShowNexusChat(prev => !prev), description: 'NEXUS AI öffnen', category: 'AI' },
     { key: '?', ctrl: true, action: () => setShowShortcutsHelp(true), description: 'Shortcuts anzeigen', category: 'Hilfe' },
     { key: '1', ctrl: true, action: () => setActiveTab('documents'), description: 'Dokumente Tab', category: 'Navigation' },
     { key: '2', ctrl: true, action: () => setActiveTab('codes'), description: 'Codes Tab', category: 'Navigation' },
     { key: '3', ctrl: true, action: () => setActiveTab('memos'), description: 'Memos Tab', category: 'Navigation' },
     { key: '4', ctrl: true, action: () => setActiveTab('team'), description: 'Team Tab', category: 'Navigation' },
     { key: '5', ctrl: true, action: () => setActiveTab('analysis'), description: 'Analyse Tab', category: 'Navigation' },
-    { key: 'Escape', action: () => { setShowSearch(false); setShowExportModal(false); setShowNewDocument(false); setShowReportGenerator(false); setShowShortcutsHelp(false) }, description: 'Dialoge schließen', category: 'Navigation' },
+    { key: '6', ctrl: true, action: () => setActiveTab('quality'), description: 'Qualität Tab', category: 'Navigation' },
+    { key: 'Escape', action: () => { setShowSearch(false); setShowExportModal(false); setShowNewDocument(false); setShowReportGenerator(false); setShowShortcutsHelp(false); setShowNexusChat(false) }, description: 'Dialoge schließen', category: 'Navigation' },
   ], [])
 
   useKeyboardShortcuts(shortcuts)
@@ -96,6 +104,7 @@ export default function ProjectPage() {
     { id: 'memos', name: 'Memos', count: memos.length },
     { id: 'team', name: 'Team', count: 4 },
     { id: 'analysis', name: 'Analyse' },
+    { id: 'quality', name: 'Qualität' },
   ]
 
   return (
@@ -182,11 +191,15 @@ export default function ProjectPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </button>
-                <button className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium flex items-center gap-2">
+                <button
+                  onClick={() => setShowNexusChat(true)}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-sm font-medium flex items-center gap-2 shadow-lg shadow-purple-500/20"
+                  title="NEXUS AI öffnen (Ctrl+Shift+I)"
+                >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  AI Kodieren
+                  NEXUS AI
                 </button>
               </div>
             </div>
@@ -239,6 +252,29 @@ export default function ProjectPage() {
                 codes={codes}
                 codings={codings}
                 documents={documents}
+              />
+            )}
+            {activeTab === 'quality' && (
+              <DataQualityDashboard
+                documents={documents.map(d => ({
+                  id: d.id,
+                  name: d.name,
+                  content: d.content,
+                  file_type: d.fileType,
+                  word_count: d.wordCount
+                }))}
+                codes={codes.map(c => ({
+                  id: c.id,
+                  name: c.name,
+                  description: c.description
+                }))}
+                codings={codings.map(c => ({
+                  id: c.id,
+                  document_id: c.documentId,
+                  code_id: c.codeId,
+                  selected_text: c.selectedText
+                }))}
+                language="de"
               />
             )}
           </>
@@ -306,6 +342,33 @@ export default function ProjectPage() {
             onClose={() => setShowShortcutsHelp(false)}
           />
         )}
+
+        {/* NEXUS AI Chat */}
+        <NexusAIChat
+          apiKey={claudeApiKey}
+          context={{
+            documents: documents.map(d => ({
+              id: d.id,
+              name: d.name,
+              content: d.content,
+              word_count: d.wordCount
+            })),
+            codes: codes.map(c => ({
+              id: c.id,
+              name: c.name,
+              description: c.description
+            })),
+            codings: codings.map(c => ({
+              id: c.id,
+              code_id: c.codeId,
+              document_id: c.documentId,
+              selected_text: c.selectedText
+            }))
+          }}
+          language="de"
+          isOpen={showNexusChat}
+          onClose={() => setShowNexusChat(false)}
+        />
       </div>
     </Layout>
   )
