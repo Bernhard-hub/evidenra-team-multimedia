@@ -6,6 +6,7 @@ import ActivityFeed from '@/components/ActivityFeed'
 import ExportModal from '@/components/ExportModal'
 import DocumentUpload from '@/components/DocumentUpload'
 import MediaUpload from '@/components/MediaUpload'
+import SearchPanel from '@/components/SearchPanel'
 import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 import { useRealtime } from '@/hooks/useRealtime'
@@ -34,6 +35,19 @@ export default function ProjectPage() {
   const [showExportModal, setShowExportModal] = useState(false)
   const [showNewDocument, setShowNewDocument] = useState(false)
   const [showMediaUpload, setShowMediaUpload] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+
+  // Keyboard shortcut for search (Ctrl/Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowSearch(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Real-time subscriptions
   useRealtime({ projectId, enabled: true })
@@ -105,6 +119,17 @@ export default function ProjectPage() {
                 {onlineUsers.length > 0 && (
                   <PresenceIndicator users={onlineUsers} maxVisible={3} />
                 )}
+                <button
+                  onClick={() => setShowSearch(true)}
+                  className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
+                  title="Suchen (Ctrl+K)"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <span className="hidden lg:inline">Suchen</span>
+                  <kbd className="hidden lg:inline px-1.5 py-0.5 rounded bg-surface-700 text-xs font-mono">⌘K</kbd>
+                </button>
                 <button
                   onClick={() => setShowExportModal(true)}
                   className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
@@ -198,6 +223,17 @@ export default function ProjectPage() {
           <MediaUploadWrapper
             projectId={projectId}
             onClose={() => setShowMediaUpload(false)}
+          />
+        )}
+
+        {/* Search Panel */}
+        {showSearch && projectId && (
+          <SearchPanel
+            projectId={projectId}
+            documents={documents}
+            codes={codes}
+            codings={codings}
+            onClose={() => setShowSearch(false)}
           />
         )}
       </div>
