@@ -9,12 +9,14 @@ import MediaUpload from '@/components/MediaUpload'
 import SearchPanel from '@/components/SearchPanel'
 import AnalysisDashboard from '@/components/AnalysisDashboard'
 import TeamManager from '@/components/TeamManager'
+import MemoPanel from '@/components/MemoPanel'
 import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
+import { useMemoStore } from '@/stores/memoStore'
 import { useRealtime } from '@/hooks/useRealtime'
 import { usePresence } from '@/hooks/usePresence'
 
-type TabType = 'documents' | 'codes' | 'team' | 'analysis'
+type TabType = 'documents' | 'codes' | 'memos' | 'team' | 'analysis'
 
 export default function ProjectPage() {
   const { projectId } = useParams()
@@ -70,9 +72,18 @@ export default function ProjectPage() {
     frequency: codings.filter((c) => c.codeId === code.id).length,
   }))
 
+  // Fetch memos
+  const { memos, fetchMemos } = useMemoStore()
+  useEffect(() => {
+    if (projectId) {
+      fetchMemos(projectId)
+    }
+  }, [projectId, fetchMemos])
+
   const tabs: { id: TabType; name: string; count?: number }[] = [
     { id: 'documents', name: 'Dokumente', count: documents.length },
     { id: 'codes', name: 'Codes', count: codes.length },
+    { id: 'memos', name: 'Memos', count: memos.length },
     { id: 'team', name: 'Team', count: 4 },
     { id: 'analysis', name: 'Analyse' },
   ]
@@ -186,6 +197,9 @@ export default function ProjectPage() {
             )}
             {activeTab === 'codes' && (
               <CodesTab codes={codeFrequencies} projectId={projectId || ''} isLoading={isLoadingCodes} />
+            )}
+            {activeTab === 'memos' && projectId && (
+              <MemoPanel projectId={projectId} showAllMemos />
             )}
             {activeTab === 'team' && projectId && (
               <TeamManager projectId={projectId} />
