@@ -7,6 +7,7 @@ import ExportModal from '@/components/ExportModal'
 import DocumentUpload from '@/components/DocumentUpload'
 import MediaUpload from '@/components/MediaUpload'
 import SearchPanel from '@/components/SearchPanel'
+import AnalysisDashboard from '@/components/AnalysisDashboard'
 import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 import { useRealtime } from '@/hooks/useRealtime'
@@ -189,7 +190,11 @@ export default function ProjectPage() {
               <TeamTab />
             )}
             {activeTab === 'analysis' && (
-              <AnalysisTab codes={codeFrequencies} />
+              <AnalysisDashboard
+                codes={codes}
+                codings={codings}
+                documents={documents}
+              />
             )}
           </>
         )}
@@ -648,89 +653,3 @@ function TeamTab() {
   )
 }
 
-function AnalysisTab({ codes }: { codes: (Code & { frequency: number })[] }) {
-  const sortedCodes = [...codes].sort((a, b) => b.frequency - a.frequency).slice(0, 5)
-  const maxFrequency = Math.max(...codes.map((c) => c.frequency), 1)
-
-  const mockCoders = [
-    { id: 'c1', name: 'Anna Müller', codingCount: 87 },
-    { id: 'c2', name: 'Max Koch', codingCount: 64 },
-    { id: 'c3', name: 'Lisa Schmidt', codingCount: 52 },
-  ]
-
-  const mockActivities = [
-    { id: 'a1', userId: 'c1', userName: 'Anna Müller', userColor: '#f59e0b', action: 'coding_added' as const, target: 'Nutzererfahrung', createdAt: new Date(Date.now() - 300000).toISOString() },
-    { id: 'a2', userId: 'c2', userName: 'Max Koch', userColor: '#3b82f6', action: 'code_created' as const, target: 'Frustration', createdAt: new Date(Date.now() - 900000).toISOString() },
-    { id: 'a3', userId: 'c3', userName: 'Lisa Schmidt', userColor: '#22c55e', action: 'comment_added' as const, createdAt: new Date(Date.now() - 1800000).toISOString() },
-    { id: 'a4', userId: 'c1', userName: 'Anna Müller', userColor: '#f59e0b', action: 'document_added' as const, target: 'Interview_004.txt', createdAt: new Date(Date.now() - 3600000).toISOString() },
-    { id: 'a5', userId: 'c2', userName: 'Max Koch', userColor: '#3b82f6', action: 'coding_added' as const, target: 'Lernprozess', createdAt: new Date(Date.now() - 7200000).toISOString() },
-  ]
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      {/* Code Frequency Chart */}
-      <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
-        <h3 className="text-lg font-semibold text-surface-100 mb-4">Code-Häufigkeit</h3>
-        {sortedCodes.length > 0 ? (
-          <div className="space-y-3">
-            {sortedCodes.map((code) => (
-              <div key={code.id} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-surface-300">{code.name}</span>
-                  <span className="text-surface-500">{code.frequency}</span>
-                </div>
-                <div className="h-2 bg-surface-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${(code.frequency / maxFrequency) * 100}%`,
-                      backgroundColor: code.color,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-surface-500 text-sm">Noch keine Kodierungen vorhanden</p>
-        )}
-      </div>
-
-      {/* IRR Panel */}
-      <IRRPanel
-        coders={mockCoders}
-        onCalculate={(metric, coderIds) => ({
-          metric,
-          value: 0.75,
-          interpretation: 'Substantial',
-        })}
-      />
-
-      {/* AI Coding Summary */}
-      <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
-        <h3 className="text-lg font-semibold text-surface-100 mb-4">AI-Kodierung</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-2xl font-bold text-primary-400">4</p>
-            <p className="text-sm text-surface-400">Methoden</p>
-          </div>
-          <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-2xl font-bold text-green-400">87%</p>
-            <p className="text-sm text-surface-400">Konsensrate</p>
-          </div>
-          <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-2xl font-bold text-blue-400">3</p>
-            <p className="text-sm text-surface-400">Personas</p>
-          </div>
-          <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-2xl font-bold text-purple-400">0.82</p>
-            <p className="text-sm text-surface-400">Fleiss' κ</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Activity Feed */}
-      <ActivityFeed activities={mockActivities} maxItems={5} />
-    </div>
-  )
-}
