@@ -172,9 +172,11 @@ export default function ProjectPage() {
             projectName={currentProject.name}
             documentCount={documents.length}
             codingCount={codings.length}
-            onExport={(format, options) => {
-              console.log('Export:', format, options)
-              alert(`Export als ${format.toUpperCase()} gestartet!`)
+            exportData={{
+              project: currentProject,
+              documents,
+              codes,
+              codings,
             }}
             onClose={() => setShowExportModal(false)}
           />

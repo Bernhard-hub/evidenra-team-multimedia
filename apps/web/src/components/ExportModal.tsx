@@ -1,21 +1,13 @@
 import { useState } from 'react'
-
-type ExportFormat = 'xlsx' | 'csv' | 'json' | 'maxqda' | 'atlas'
+import { exportProject, type ExportFormat, type ExportData, type ExportOptions } from '@/lib/export'
 
 interface ExportModalProps {
   projectName: string
   documentCount: number
   codingCount: number
-  onExport: (format: ExportFormat, options: ExportOptions) => void
+  exportData?: ExportData
+  onExport?: (format: ExportFormat, options: ExportOptions) => void
   onClose: () => void
-}
-
-interface ExportOptions {
-  includeDocuments: boolean
-  includeCodes: boolean
-  includeCodings: boolean
-  includeMemos: boolean
-  includeMetadata: boolean
 }
 
 const formats: {
@@ -48,15 +40,15 @@ const formats: {
   },
   {
     id: 'maxqda',
-    name: 'MAXQDA',
-    description: 'Import-Format für MAXQDA Software',
+    name: 'REFI-QDA (MAXQDA)',
+    description: 'REFI-QDA Standard für MAXQDA, NVivo, Atlas.ti',
     icon: '🔷',
-    extension: '.mx22',
+    extension: '.qdpx',
   },
   {
     id: 'atlas',
-    name: 'Atlas.ti',
-    description: 'Import-Format für Atlas.ti Software',
+    name: 'REFI-QDA (Atlas.ti)',
+    description: 'REFI-QDA Standard für Atlas.ti Import',
     icon: '🔶',
     extension: '.atlproj',
   },
@@ -66,6 +58,7 @@ export default function ExportModal({
   projectName,
   documentCount,
   codingCount,
+  exportData,
   onExport,
   onClose,
 }: ExportModalProps) {
@@ -78,16 +71,35 @@ export default function ExportModal({
     includeMetadata: true,
   })
   const [isExporting, setIsExporting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   const handleExport = async () => {
     setIsExporting(true)
+    setError(null)
+    setSuccess(false)
 
-    // Simulate export delay
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    onExport(selectedFormat, options)
-    setIsExporting(false)
-    onClose()
+    try {
+      if (exportData) {
+        // Use actual export functionality
+        await exportProject(selectedFormat, exportData, options)
+        setSuccess(true)
+        setTimeout(() => {
+          onClose()
+        }, 1500)
+      } else if (onExport) {
+        // Fallback to callback
+        onExport(selectedFormat, options)
+        onClose()
+      } else {
+        throw new Error('Keine Exportdaten verfügbar')
+      }
+    } catch (err) {
+      console.error('Export error:', err)
+      setError(err instanceof Error ? err.message : 'Export fehlgeschlagen')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const selectedFormatInfo = formats.find((f) => f.id === selectedFormat)
@@ -104,6 +116,23 @@ export default function ExportModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Export erfolgreich! Download startet...
+            </div>
+          )}
+
           {/* Stats */}
           <div className="flex gap-4">
             <div className="flex-1 p-3 rounded-lg bg-surface-800 text-center">
@@ -188,13 +217,20 @@ export default function ExportModal({
             </button>
             <button
               onClick={handleExport}
-              disabled={isExporting}
+              disabled={isExporting || success}
               className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium flex items-center gap-2 disabled:opacity-50"
             >
               {isExporting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Exportiere...
+                </>
+              ) : success ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Fertig!
                 </>
               ) : (
                 <>
@@ -211,3 +247,6 @@ export default function ExportModal({
     </div>
   )
 }
+
+// Re-export types for convenience
+export type { ExportFormat, ExportOptions, ExportData }
