@@ -4,6 +4,7 @@ import Layout from '@/components/Layout'
 import IRRPanel from '@/components/IRRPanel'
 import ActivityFeed from '@/components/ActivityFeed'
 import ExportModal from '@/components/ExportModal'
+import DocumentUpload from '@/components/DocumentUpload'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 
 type TabType = 'documents' | 'codes' | 'team' | 'analysis'
@@ -165,9 +166,9 @@ export default function ProjectPage() {
           />
         )}
 
-        {/* New Document Modal */}
+        {/* Document Upload Modal */}
         {showNewDocument && projectId && (
-          <NewDocumentModal
+          <DocumentUploadWrapper
             projectId={projectId}
             onClose={() => setShowNewDocument(false)}
           />
@@ -177,90 +178,23 @@ export default function ProjectPage() {
   )
 }
 
-function NewDocumentModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+function DocumentUploadWrapper({ projectId, onClose }: { projectId: string; onClose: () => void }) {
   const { createDocument } = useProjectStore()
-  const [name, setName] = useState('')
-  const [content, setContent] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
-
-    setIsCreating(true)
+  const handleUpload = async (document: { name: string; content: string; type: string }) => {
     const doc = await createDocument({
       projectId,
-      name: name.trim(),
-      content: content.trim(),
-      fileType: 'text',
+      name: document.name,
+      content: document.content,
+      fileType: document.type,
     })
 
     if (doc) {
       onClose()
     }
-    setIsCreating(false)
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-surface-900 rounded-2xl border border-surface-800 shadow-xl">
-        <div className="p-6 border-b border-surface-800">
-          <h2 className="text-xl font-semibold text-surface-100">Neues Dokument</h2>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-surface-300 mb-1.5">
-              Dokumentname *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-              placeholder="z.B. Interview_001_Schmidt.txt"
-              autoFocus
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-surface-300 mb-1.5">
-              Inhalt
-            </label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={12}
-              className="w-full px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 resize-none font-mono text-sm"
-              placeholder="Fügen Sie hier den Dokumentinhalt ein..."
-            />
-            <p className="text-xs text-surface-500 mt-1">
-              {content.split(/\s+/).filter(Boolean).length} Wörter
-            </p>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 font-medium"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="submit"
-              disabled={isCreating || !name.trim()}
-              className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium disabled:opacity-50"
-            >
-              {isCreating ? 'Erstellen...' : 'Dokument erstellen'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
+  return <DocumentUpload onUpload={handleUpload} onClose={onClose} />
 }
 
 function DocumentsTab({
@@ -366,6 +300,27 @@ function DocumentsTab({
 }
 
 function DocumentIcon({ type }: { type: string }) {
+  // PDF files
+  if (type === 'pdf') {
+    return (
+      <div className="w-8 h-8 rounded bg-red-500/10 flex items-center justify-center">
+        <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+    )
+  }
+  // DOCX files
+  if (type === 'docx') {
+    return (
+      <div className="w-8 h-8 rounded bg-indigo-500/10 flex items-center justify-center">
+        <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+    )
+  }
+  // Audio/Media files
   if (type === 'media' || type === 'audio') {
     return (
       <div className="w-8 h-8 rounded bg-purple-500/10 flex items-center justify-center">
@@ -375,18 +330,20 @@ function DocumentIcon({ type }: { type: string }) {
       </div>
     )
   }
-  if (type === 'note' || type === 'pdf') {
+  // Notes
+  if (type === 'note') {
     return (
-      <div className="w-8 h-8 rounded bg-blue-500/10 flex items-center justify-center">
-        <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="w-8 h-8 rounded bg-yellow-500/10 flex items-center justify-center">
+        <svg className="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
       </div>
     )
   }
+  // Default: text files
   return (
-    <div className="w-8 h-8 rounded bg-primary-500/10 flex items-center justify-center">
-      <svg className="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="w-8 h-8 rounded bg-blue-500/10 flex items-center justify-center">
+      <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
     </div>
