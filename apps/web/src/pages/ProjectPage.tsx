@@ -16,6 +16,7 @@ import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndica
 import NexusAIChat from '@/components/NexusAIChat'
 import DataQualityDashboard from '@/components/DataQualityDashboard'
 import ThesisGenerator from '@/components/ThesisGenerator'
+import MethodologyGuide from '@/components/MethodologyGuide'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 import { useMemoStore } from '@/stores/memoStore'
 import { useRealtime } from '@/hooks/useRealtime'
@@ -50,6 +51,7 @@ export default function ProjectPage() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
   const [showNexusChat, setShowNexusChat] = useState(false)
   const [showThesisGenerator, setShowThesisGenerator] = useState(false)
+  const [showMethodologyGuide, setShowMethodologyGuide] = useState(false)
 
   // Get Claude API key from localStorage or env
   const claudeApiKey = localStorage.getItem('claude_api_key') || import.meta.env.VITE_ANTHROPIC_API_KEY || ''
@@ -62,6 +64,7 @@ export default function ProjectPage() {
     { key: 'r', ctrl: true, shift: true, action: () => setShowReportGenerator(true), description: 'Bericht erstellen', category: 'Allgemein' },
     { key: 'i', ctrl: true, shift: true, action: () => setShowNexusChat(prev => !prev), description: 'NEXUS AI öffnen', category: 'AI' },
     { key: 't', ctrl: true, shift: true, action: () => setShowThesisGenerator(true), description: 'Thesis Generator öffnen', category: 'AI' },
+    { key: 'm', ctrl: true, shift: true, action: () => setShowMethodologyGuide(true), description: 'Methoden-Guide öffnen', category: 'Hilfe' },
     { key: '?', ctrl: true, action: () => setShowShortcutsHelp(true), description: 'Shortcuts anzeigen', category: 'Hilfe' },
     { key: '1', ctrl: true, action: () => setActiveTab('documents'), description: 'Dokumente Tab', category: 'Navigation' },
     { key: '2', ctrl: true, action: () => setActiveTab('codes'), description: 'Codes Tab', category: 'Navigation' },
@@ -69,7 +72,7 @@ export default function ProjectPage() {
     { key: '4', ctrl: true, action: () => setActiveTab('team'), description: 'Team Tab', category: 'Navigation' },
     { key: '5', ctrl: true, action: () => setActiveTab('analysis'), description: 'Analyse Tab', category: 'Navigation' },
     { key: '6', ctrl: true, action: () => setActiveTab('quality'), description: 'Qualität Tab', category: 'Navigation' },
-    { key: 'Escape', action: () => { setShowSearch(false); setShowExportModal(false); setShowNewDocument(false); setShowReportGenerator(false); setShowShortcutsHelp(false); setShowNexusChat(false); setShowThesisGenerator(false) }, description: 'Dialoge schließen', category: 'Navigation' },
+    { key: 'Escape', action: () => { setShowSearch(false); setShowExportModal(false); setShowNewDocument(false); setShowReportGenerator(false); setShowShortcutsHelp(false); setShowNexusChat(false); setShowThesisGenerator(false); setShowMethodologyGuide(false) }, description: 'Dialoge schließen', category: 'Navigation' },
   ], [])
 
   useKeyboardShortcuts(shortcuts)
@@ -203,6 +206,16 @@ export default function ProjectPage() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
+                </button>
+                <button
+                  onClick={() => setShowMethodologyGuide(true)}
+                  className="px-4 py-2 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-sm font-medium flex items-center gap-2"
+                  title="Methoden-Guide (Ctrl+Shift+M)"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                  <span className="hidden lg:inline">Guide</span>
                 </button>
                 <button
                   onClick={() => setShowNexusChat(true)}
@@ -408,6 +421,16 @@ export default function ProjectPage() {
               projectName: currentProject?.name
             }}
             onClose={() => setShowThesisGenerator(false)}
+          />
+        )}
+
+        {/* Methodology Guide */}
+        {projectId && (
+          <MethodologyGuide
+            projectId={projectId}
+            isOpen={showMethodologyGuide}
+            onClose={() => setShowMethodologyGuide(false)}
+            language="de"
           />
         )}
       </div>
