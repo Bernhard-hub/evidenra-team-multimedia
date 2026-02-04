@@ -15,6 +15,7 @@ import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp'
 import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
 import NexusAIChat from '@/components/NexusAIChat'
 import DataQualityDashboard from '@/components/DataQualityDashboard'
+import ThesisGenerator from '@/components/ThesisGenerator'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 import { useMemoStore } from '@/stores/memoStore'
 import { useRealtime } from '@/hooks/useRealtime'
@@ -48,6 +49,7 @@ export default function ProjectPage() {
   const [showReportGenerator, setShowReportGenerator] = useState(false)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
   const [showNexusChat, setShowNexusChat] = useState(false)
+  const [showThesisGenerator, setShowThesisGenerator] = useState(false)
 
   // Get Claude API key from localStorage or env
   const claudeApiKey = localStorage.getItem('claude_api_key') || import.meta.env.VITE_ANTHROPIC_API_KEY || ''
@@ -59,6 +61,7 @@ export default function ProjectPage() {
     { key: 'e', ctrl: true, shift: true, action: () => setShowExportModal(true), description: 'Exportieren', category: 'Allgemein' },
     { key: 'r', ctrl: true, shift: true, action: () => setShowReportGenerator(true), description: 'Bericht erstellen', category: 'Allgemein' },
     { key: 'i', ctrl: true, shift: true, action: () => setShowNexusChat(prev => !prev), description: 'NEXUS AI öffnen', category: 'AI' },
+    { key: 't', ctrl: true, shift: true, action: () => setShowThesisGenerator(true), description: 'Thesis Generator öffnen', category: 'AI' },
     { key: '?', ctrl: true, action: () => setShowShortcutsHelp(true), description: 'Shortcuts anzeigen', category: 'Hilfe' },
     { key: '1', ctrl: true, action: () => setActiveTab('documents'), description: 'Dokumente Tab', category: 'Navigation' },
     { key: '2', ctrl: true, action: () => setActiveTab('codes'), description: 'Codes Tab', category: 'Navigation' },
@@ -66,7 +69,7 @@ export default function ProjectPage() {
     { key: '4', ctrl: true, action: () => setActiveTab('team'), description: 'Team Tab', category: 'Navigation' },
     { key: '5', ctrl: true, action: () => setActiveTab('analysis'), description: 'Analyse Tab', category: 'Navigation' },
     { key: '6', ctrl: true, action: () => setActiveTab('quality'), description: 'Qualität Tab', category: 'Navigation' },
-    { key: 'Escape', action: () => { setShowSearch(false); setShowExportModal(false); setShowNewDocument(false); setShowReportGenerator(false); setShowShortcutsHelp(false); setShowNexusChat(false) }, description: 'Dialoge schließen', category: 'Navigation' },
+    { key: 'Escape', action: () => { setShowSearch(false); setShowExportModal(false); setShowNewDocument(false); setShowReportGenerator(false); setShowShortcutsHelp(false); setShowNexusChat(false); setShowThesisGenerator(false) }, description: 'Dialoge schließen', category: 'Navigation' },
   ], [])
 
   useKeyboardShortcuts(shortcuts)
@@ -171,6 +174,16 @@ export default function ProjectPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <span className="hidden lg:inline">Bericht</span>
+                </button>
+                <button
+                  onClick={() => setShowThesisGenerator(true)}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-medium flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                  title="Thesis Generator öffnen (Ctrl+Shift+T)"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <span className="hidden lg:inline">Thesis</span>
                 </button>
                 <button
                   onClick={() => setShowExportModal(true)}
@@ -369,6 +382,34 @@ export default function ProjectPage() {
           isOpen={showNexusChat}
           onClose={() => setShowNexusChat(false)}
         />
+
+        {/* Thesis Generator */}
+        {showThesisGenerator && (
+          <ThesisGenerator
+            apiKey={claudeApiKey}
+            researchData={{
+              documents: documents.map(d => ({
+                id: d.id,
+                name: d.name,
+                content: d.content,
+                wordCount: d.wordCount
+              })),
+              categories: codes.map(c => ({
+                id: c.id,
+                name: c.name,
+                description: c.description
+              })),
+              codings: codings.map(c => ({
+                id: c.id,
+                text: c.selectedText,
+                categoryId: c.codeId,
+                documentId: c.documentId
+              })),
+              projectName: currentProject?.name
+            }}
+            onClose={() => setShowThesisGenerator(false)}
+          />
+        )}
       </div>
     </Layout>
   )
