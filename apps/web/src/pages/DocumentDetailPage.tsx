@@ -4,8 +4,11 @@ import Layout from '@/components/Layout'
 import DocumentViewer from '@/components/DocumentViewer'
 import CodeManager from '@/components/CodeManager'
 import AICodingPanel from '@/components/AICodingPanel'
+import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
 import { runAICoding, claude, type CodingMethod } from '@/lib/claude'
 import { useProjectStore } from '@/stores/projectStore'
+import { useRealtime } from '@/hooks/useRealtime'
+import { usePresence } from '@/hooks/usePresence'
 
 // Local interface for DocumentViewer compatibility
 interface ViewerCoding {
@@ -55,6 +58,10 @@ export default function DocumentDetailPage() {
   const [aiProgress, setAIProgress] = useState(0)
   const [aiStatus, setAIStatus] = useState('')
   const [aiError, setAIError] = useState<string | null>(null)
+
+  // Real-time subscriptions
+  useRealtime({ projectId, documentId, enabled: true })
+  const { onlineUsers, isConnected } = usePresence({ projectId, documentId, enabled: true })
 
   // Fetch data on mount
   useEffect(() => {
@@ -310,11 +317,18 @@ export default function DocumentDetailPage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-surface-100">{currentDocument.name}</h1>
-            <p className="text-surface-400 mt-1">
-              {currentDocument.wordCount} Wörter · {codings.length} Kodierungen
-            </p>
+            <div className="flex items-center gap-4 mt-1">
+              <p className="text-surface-400">
+                {currentDocument.wordCount} Wörter · {codings.length} Kodierungen
+              </p>
+              <ConnectionStatus isConnected={isConnected} />
+            </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Online Users */}
+            {onlineUsers.length > 0 && (
+              <PresenceIndicator users={onlineUsers} maxVisible={3} />
+            )}
             <button className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />

@@ -1,18 +1,49 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import type { PresenceUser } from '@/hooks/usePresence'
 
-interface User {
+// Re-export the PresenceUser type for backward compatibility
+export type { PresenceUser }
+
+// Legacy User interface for backward compatibility
+interface LegacyUser {
   id: string
   name: string
   avatarUrl?: string
   color: string
 }
 
+type User = PresenceUser | LegacyUser
+
+function isPresenceUser(user: User): user is PresenceUser {
+  return 'email' in user
+}
+
+function getUserName(user: User): string {
+  if (isPresenceUser(user)) {
+    return user.fullName || user.email
+  }
+  return user.name
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(/[\s@]+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('')
+}
+
 interface PresenceIndicatorProps {
   users: User[]
   maxVisible?: number
+  showTooltip?: boolean
 }
 
-export default function PresenceIndicator({ users, maxVisible = 4 }: PresenceIndicatorProps) {
+export default function PresenceIndicator({
+  users,
+  maxVisible = 4,
+  showTooltip = true,
+}: PresenceIndicatorProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const visibleUsers = users.slice(0, maxVisible)
   const hiddenCount = users.length - maxVisible
@@ -25,21 +56,32 @@ export default function PresenceIndicator({ users, maxVisible = 4 }: PresenceInd
         {visibleUsers.map((user, idx) => (
           <div
             key={user.id}
-            className="relative"
+            className="relative group"
             style={{ zIndex: visibleUsers.length - idx }}
           >
             <div
-              className="w-8 h-8 rounded-full border-2 border-surface-900 flex items-center justify-center text-xs font-medium text-white"
+              className="w-8 h-8 rounded-full border-2 border-surface-900 flex items-center justify-center text-xs font-medium text-white cursor-pointer transition-transform hover:scale-110 hover:z-50"
               style={{ backgroundColor: user.color }}
-              title={user.name}
+              title={getUserName(user)}
             >
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-full h-full rounded-full" />
+              {!isPresenceUser(user) && user.avatarUrl ? (
+                <img src={user.avatarUrl} alt={getUserName(user)} className="w-full h-full rounded-full" />
               ) : (
-                user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+                getInitials(getUserName(user))
               )}
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-surface-900 presence-online" />
+
+            {/* Tooltip */}
+            {showTooltip && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-surface-800 rounded text-xs text-surface-100 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                <div className="font-medium">{getUserName(user)}</div>
+                {isPresenceUser(user) && user.currentDocument && (
+                  <div className="text-surface-400">Arbeitet an Dokument</div>
+                )}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-surface-800" />
+              </div>
+            )}
           </div>
         ))}
 
@@ -57,26 +99,37 @@ export default function PresenceIndicator({ users, maxVisible = 4 }: PresenceInd
       {isExpanded && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsExpanded(false)} />
-          <div className="absolute top-full right-0 mt-2 w-64 bg-surface-800 rounded-xl border border-surface-700 shadow-xl z-50 p-2">
-            <p className="px-3 py-2 text-xs font-medium text-surface-400 uppercase">
-              {users.length} Nutzer online
-            </p>
-            <div className="space-y-1">
+          <div className="absolute top-full right-0 mt-2 w-64 bg-surface-800 rounded-xl border border-surface-700 shadow-xl z-50 overflow-hidden">
+            <div className="p-3 border-b border-surface-700">
+              <h4 className="text-sm font-medium text-surface-100">
+                {users.length} Nutzer online
+              </h4>
+            </div>
+            <div className="max-h-64 overflow-y-auto">
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-700"
+                  className="flex items-center gap-3 px-3 py-2 hover:bg-surface-700/50"
                 >
                   <div className="relative">
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium text-white"
                       style={{ backgroundColor: user.color }}
                     >
-                      {user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+                      {getInitials(getUserName(user))}
                     </div>
                     <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-surface-800" />
                   </div>
-                  <span className="text-sm text-surface-200">{user.name}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-surface-100 truncate">
+                      {getUserName(user)}
+                    </p>
+                    {isPresenceUser(user) && user.currentDocument && (
+                      <p className="text-xs text-surface-500 truncate">
+                        Arbeitet an Dokument
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -106,7 +159,7 @@ export function UserCursor({ user, position }: { user: User; position: { x: numb
         className="absolute left-4 top-4 px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap"
         style={{ backgroundColor: user.color }}
       >
-        {user.name}
+        {getUserName(user)}
       </span>
     </div>
   )
@@ -115,11 +168,9 @@ export function UserCursor({ user, position }: { user: User; position: { x: numb
 // Selection highlight for showing what other users have selected
 export function UserSelection({
   user,
-  text,
   rect,
 }: {
   user: User
-  text: string
   rect: { x: number; y: number; width: number; height: number }
 }) {
   return (
@@ -138,8 +189,52 @@ export function UserSelection({
         className="absolute -top-5 left-0 px-1.5 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap"
         style={{ backgroundColor: user.color }}
       >
-        {user.name}
+        {getUserName(user)}
       </span>
+    </div>
+  )
+}
+
+// Connection status indicator
+export function ConnectionStatus({ isConnected }: { isConnected: boolean }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        className={`w-2 h-2 rounded-full ${
+          isConnected ? 'bg-green-500 animate-pulse' : 'bg-surface-600'
+        }`}
+      />
+      <span className="text-xs text-surface-500">
+        {isConnected ? 'Live' : 'Offline'}
+      </span>
+    </div>
+  )
+}
+
+// Compact version for headers
+export function PresenceAvatars({ users }: { users: User[] }) {
+  if (users.length === 0) return null
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-surface-500">Online:</span>
+      <div className="flex -space-x-1.5">
+        {users.slice(0, 3).map((user) => (
+          <div
+            key={user.id}
+            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium text-white border border-surface-900"
+            style={{ backgroundColor: user.color }}
+            title={getUserName(user)}
+          >
+            {getInitials(getUserName(user))}
+          </div>
+        ))}
+        {users.length > 3 && (
+          <div className="w-6 h-6 rounded-full bg-surface-700 flex items-center justify-center text-[10px] font-medium text-surface-400 border border-surface-900">
+            +{users.length - 3}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

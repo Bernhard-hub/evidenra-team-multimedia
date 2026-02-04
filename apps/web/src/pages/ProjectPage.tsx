@@ -5,7 +5,10 @@ import IRRPanel from '@/components/IRRPanel'
 import ActivityFeed from '@/components/ActivityFeed'
 import ExportModal from '@/components/ExportModal'
 import DocumentUpload from '@/components/DocumentUpload'
+import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
+import { useRealtime } from '@/hooks/useRealtime'
+import { usePresence } from '@/hooks/usePresence'
 
 type TabType = 'documents' | 'codes' | 'team' | 'analysis'
 
@@ -29,6 +32,10 @@ export default function ProjectPage() {
   const [activeTab, setActiveTab] = useState<TabType>('documents')
   const [showExportModal, setShowExportModal] = useState(false)
   const [showNewDocument, setShowNewDocument] = useState(false)
+
+  // Real-time subscriptions
+  useRealtime({ projectId, enabled: true })
+  const { onlineUsers, isConnected } = usePresence({ projectId, enabled: true })
 
   // Fetch project and data on mount
   useEffect(() => {
@@ -84,11 +91,18 @@ export default function ProjectPage() {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-surface-100">{currentProject.name}</h1>
-                {currentProject.description && (
-                  <p className="text-surface-400 mt-1">{currentProject.description}</p>
-                )}
+                <div className="flex items-center gap-4 mt-1">
+                  {currentProject.description && (
+                    <p className="text-surface-400">{currentProject.description}</p>
+                  )}
+                  <ConnectionStatus isConnected={isConnected} />
+                </div>
               </div>
               <div className="flex items-center gap-3">
+                {/* Online Users */}
+                {onlineUsers.length > 0 && (
+                  <PresenceIndicator users={onlineUsers} maxVisible={3} />
+                )}
                 <button
                   onClick={() => setShowExportModal(true)}
                   className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium flex items-center gap-2"
