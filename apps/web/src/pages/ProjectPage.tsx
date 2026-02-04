@@ -8,6 +8,7 @@ import DocumentUpload from '@/components/DocumentUpload'
 import MediaUpload from '@/components/MediaUpload'
 import SearchPanel from '@/components/SearchPanel'
 import AnalysisDashboard from '@/components/AnalysisDashboard'
+import TeamManager from '@/components/TeamManager'
 import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 import { useRealtime } from '@/hooks/useRealtime'
@@ -186,8 +187,8 @@ export default function ProjectPage() {
             {activeTab === 'codes' && (
               <CodesTab codes={codeFrequencies} projectId={projectId || ''} isLoading={isLoadingCodes} />
             )}
-            {activeTab === 'team' && (
-              <TeamTab />
+            {activeTab === 'team' && projectId && (
+              <TeamManager projectId={projectId} />
             )}
             {activeTab === 'analysis' && (
               <AnalysisDashboard
@@ -600,56 +601,4 @@ function CodeItem({ code, codes, level }: { code: Code & { frequency: number }; 
   )
 }
 
-function TeamTab() {
-  const members = [
-    { id: '1', name: 'Anna Müller', email: 'anna@example.com', role: 'admin', isOnline: true },
-    { id: '2', name: 'Max Koch', email: 'max@example.com', role: 'coder', isOnline: true },
-    { id: '3', name: 'Lisa Schmidt', email: 'lisa@example.com', role: 'reviewer', isOnline: false },
-    { id: '4', name: 'Tom Weber', email: 'tom@example.com', role: 'viewer', isOnline: false },
-  ]
-
-  const roleLabels: Record<string, string> = {
-    admin: 'Admin',
-    coder: 'Kodierer',
-    reviewer: 'Reviewer',
-    viewer: 'Betrachter',
-  }
-
-  return (
-    <div className="space-y-4">
-      <button className="px-4 py-2 rounded-lg border border-dashed border-surface-700 text-surface-400 hover:border-primary-500 hover:text-primary-400 text-sm flex items-center gap-2">
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-        </svg>
-        Mitglied einladen
-      </button>
-
-      <div className="bg-surface-900 rounded-xl border border-surface-800 divide-y divide-surface-800">
-        {members.map((member) => (
-          <div key={member.id} className="flex items-center gap-4 p-4">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary-400">
-                  {member.name.split(' ').map((n) => n[0]).join('')}
-                </span>
-              </div>
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-surface-900 ${
-                  member.isOnline ? 'bg-green-500' : 'bg-surface-600'
-                }`}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-surface-100">{member.name}</p>
-              <p className="text-xs text-surface-500">{member.email}</p>
-            </div>
-            <span className="px-2 py-1 rounded text-xs font-medium bg-surface-800 text-surface-400">
-              {roleLabels[member.role]}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
