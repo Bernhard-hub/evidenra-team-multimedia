@@ -1,21 +1,19 @@
 import { useState, useMemo } from 'react'
-
-interface Coder {
-  id: string
-  name: string
-  codingCount: number
-}
-
-interface IRRResult {
-  metric: string
-  value: number
-  interpretation: string
-  pairwise?: { coder1: string; coder2: string; value: number }[]
-}
+import type { Coding, Code, Document } from '@/stores/projectStore'
+import {
+  calculateCohensKappa,
+  calculatePercentAgreement,
+  calculateKrippendorffsAlpha,
+  extractCoders,
+  calculateDemoIRR,
+  type IRRResult,
+  type Disagreement,
+} from '@/lib/irr'
 
 interface IRRPanelProps {
-  coders: Coder[]
-  onCalculate: (metric: string, coderIds: string[]) => IRRResult
+  codings: Coding[]
+  codes: Code[]
+  documents: Document[]
 }
 
 const metrics = [
@@ -58,46 +56,82 @@ const interpretationColors: Record<string, string> = {
   'Almost Perfect': 'text-primary-400 bg-primary-400/10',
 }
 
-export default function IRRPanel({ coders, onCalculate }: IRRPanelProps) {
-  const [selectedMetric, setSelectedMetric] = useState('fleiss-kappa')
-  const [selectedCoders, setSelectedCoders] = useState<string[]>(coders.map((c) => c.id))
+export default function IRRPanel({ codings, codes, documents }: IRRPanelProps) {
+  // Extract coders from codings data
+  const coders = useMemo(() => {
+    const extracted = extractCoders(codings)
+    // Add demo coders if not enough
+    if (extracted.length < 2) {
+      return [
+        { id: 'demo-1', name: 'Anna Schmidt', codings: codings.slice(0, Math.floor(codings.length / 2)) },
+        { id: 'demo-2', name: 'Peter Meyer', codings: codings.slice(Math.floor(codings.length / 2)) },
+        { id: 'demo-3', name: 'Lisa Weber', codings: codings.slice(0, Math.floor(codings.length / 3)) },
+      ]
+    }
+    return extracted
+  }, [codings])
+
+  const [selectedMetric, setSelectedMetric] = useState('percent-agreement')
+  const [selectedCoderIds, setSelectedCoderIds] = useState<string[]>(coders.slice(0, 3).map(c => c.id))
   const [result, setResult] = useState<IRRResult | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
+  const [showDisagreements, setShowDisagreements] = useState(false)
 
   const metricInfo = metrics.find((m) => m.id === selectedMetric)
 
+  const selectedCoders = useMemo(() =>
+    coders.filter(c => selectedCoderIds.includes(c.id)),
+    [coders, selectedCoderIds]
+  )
+
   const canCalculate = useMemo(() => {
     if (!metricInfo) return false
-    const count = selectedCoders.length
+    const count = selectedCoderIds.length
     if (count < metricInfo.minCoders) return false
     if (metricInfo.maxCoders && count > metricInfo.maxCoders) return false
     return true
-  }, [selectedCoders, metricInfo])
+  }, [selectedCoderIds, metricInfo])
 
   const handleCalculate = async () => {
     setIsCalculating(true)
 
-    // Simulate calculation
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    // Small delay for UX
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // Mock result
-    const mockResult: IRRResult = {
-      metric: selectedMetric,
-      value: 0.72 + Math.random() * 0.15,
-      interpretation: 'Substantial',
-      pairwise: selectedCoders.length === 2 ? undefined : [
-        { coder1: coders[0]?.name || 'Coder 1', coder2: coders[1]?.name || 'Coder 2', value: 0.78 },
-        { coder1: coders[0]?.name || 'Coder 1', coder2: coders[2]?.name || 'Coder 3', value: 0.71 },
-        { coder1: coders[1]?.name || 'Coder 2', coder2: coders[2]?.name || 'Coder 3', value: 0.69 },
-      ],
+    let calculatedResult: IRRResult
+
+    // Use demo calculation if not enough real data
+    if (codings.length < 10 || documents.length === 0) {
+      calculatedResult = calculateDemoIRR(selectedMetric, selectedCoderIds.length)
+    } else {
+      switch (selectedMetric) {
+        case 'cohens-kappa':
+          if (selectedCoders.length === 2) {
+            calculatedResult = calculateCohensKappa(
+              selectedCoders[0],
+              selectedCoders[1],
+              documents,
+              codes
+            )
+          } else {
+            calculatedResult = calculateDemoIRR(selectedMetric, 2)
+          }
+          break
+        case 'krippendorff-alpha':
+          calculatedResult = calculateKrippendorffsAlpha(selectedCoders, documents, codes)
+          break
+        case 'percent-agreement':
+        default:
+          calculatedResult = calculatePercentAgreement(selectedCoders, documents, codes)
+      }
     }
 
-    setResult(mockResult)
+    setResult(calculatedResult)
     setIsCalculating(false)
   }
 
   const toggleCoder = (coderId: string) => {
-    setSelectedCoders((prev) =>
+    setSelectedCoderIds((prev) =>
       prev.includes(coderId)
         ? prev.filter((id) => id !== coderId)
         : [...prev, coderId]
@@ -137,7 +171,7 @@ export default function IRRPanel({ coders, onCalculate }: IRRPanelProps) {
         {/* Coder Selection */}
         <div>
           <label className="block text-sm font-medium text-surface-300 mb-2">
-            Kodierer auswählen ({selectedCoders.length} von {coders.length})
+            Kodierer auswählen ({selectedCoderIds.length} von {coders.length})
           </label>
           <div className="space-y-1">
             {coders.map((coder) => (
@@ -147,12 +181,12 @@ export default function IRRPanel({ coders, onCalculate }: IRRPanelProps) {
               >
                 <input
                   type="checkbox"
-                  checked={selectedCoders.includes(coder.id)}
+                  checked={selectedCoderIds.includes(coder.id)}
                   onChange={() => toggleCoder(coder.id)}
                   className="w-4 h-4 rounded border-surface-600 bg-surface-800 text-primary-500 focus:ring-primary-500/50"
                 />
                 <span className="flex-1 text-sm text-surface-200">{coder.name}</span>
-                <span className="text-xs text-surface-500">{coder.codingCount} Codes</span>
+                <span className="text-xs text-surface-500">{coder.codings.length} Kodierungen</span>
               </label>
             ))}
           </div>
@@ -179,7 +213,7 @@ export default function IRRPanel({ coders, onCalculate }: IRRPanelProps) {
           )}
         </button>
 
-        {!canCalculate && selectedCoders.length > 0 && (
+        {!canCalculate && selectedCoderIds.length > 0 && (
           <p className="text-xs text-yellow-400 text-center">
             {metricInfo?.name} benötigt {metricInfo?.minCoders}
             {metricInfo?.maxCoders ? ` bis ${metricInfo.maxCoders}` : '+'} Kodierer

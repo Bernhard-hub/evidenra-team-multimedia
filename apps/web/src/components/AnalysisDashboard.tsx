@@ -2,6 +2,7 @@ import { useState } from 'react'
 import CodeFrequencyChart from './CodeFrequencyChart'
 import CoOccurrenceMatrix from './CoOccurrenceMatrix'
 import CodingTimeline from './CodingTimeline'
+import IRRPanel from './IRRPanel'
 import type { Code, Coding, Document } from '@/stores/projectStore'
 
 interface AnalysisDashboardProps {
@@ -10,7 +11,7 @@ interface AnalysisDashboardProps {
   documents: Document[]
 }
 
-type ChartType = 'frequency' | 'cooccurrence' | 'timeline' | 'methods'
+type ChartType = 'frequency' | 'cooccurrence' | 'timeline' | 'methods' | 'irr'
 
 export default function AnalysisDashboard({
   codes,
@@ -108,6 +109,11 @@ export default function AnalysisDashboard({
             isActive={activeChart === 'methods'}
             onClick={() => setActiveChart('methods')}
           />
+          <ChartTab
+            label="IRR"
+            isActive={activeChart === 'irr'}
+            onClick={() => setActiveChart('irr')}
+          />
         </div>
 
         <div className="p-6">
@@ -155,6 +161,14 @@ export default function AnalysisDashboard({
 
           {activeChart === 'methods' && (
             <CodingMethodsChart codings={codings} />
+          )}
+
+          {activeChart === 'irr' && (
+            <IRRPanel
+              codings={codings}
+              codes={codes}
+              documents={documents}
+            />
           )}
         </div>
       </div>
