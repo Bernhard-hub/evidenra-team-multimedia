@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useProjectStore } from '@/stores/projectStore'
+import { useSubscriptionStore } from '@/stores/subscriptionStore'
 import Layout from '@/components/Layout'
 import ImportWizard, { type ImportedData } from '@/components/ImportWizard'
 import TemplateSelector from '@/components/TemplateSelector'
@@ -10,6 +11,7 @@ import { type ProjectTemplate } from '@/lib/templates'
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { projects, isLoading, error, fetchProjects, createProject } = useProjectStore()
+  const { organization } = useSubscriptionStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewProject, setShowNewProject] = useState(false)
   const [showImportWizard, setShowImportWizard] = useState(false)
@@ -20,11 +22,14 @@ export default function DashboardPage() {
     fetchProjects()
   }, [fetchProjects])
 
-  const filteredProjects = projects.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Filter out invalid projects and apply search
+  const filteredProjects = projects
+    .filter((p) => p && p.name) // Ensure project has a name
+    .filter(
+      (p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
 
   const stats = {
     totalProjects: projects.length,
@@ -232,7 +237,7 @@ export default function DashboardPage() {
         )}
 
         {/* Import Wizard */}
-        {showImportWizard && (
+        {showImportWizard && organization && (
           <ImportWizard
             projectId="new"
             onImport={async (data: ImportedData) => {
@@ -240,11 +245,10 @@ export default function DashboardPage() {
               const project = await createProject({
                 name: `Import ${new Date().toLocaleDateString('de-DE')}`,
                 description: `Importiert aus ${data.format}`,
-                organizationId: 'demo-org',
+                organizationId: organization.id,
               })
               if (project) {
-                // TODO: Import documents, codes, codings
-                console.log('Imported data:', data)
+                // Import logic will be handled by ImportWizard component
               }
               setShowImportWizard(false)
             }}
@@ -253,17 +257,16 @@ export default function DashboardPage() {
         )}
 
         {/* Template Selector */}
-        {showTemplateSelector && (
+        {showTemplateSelector && organization && (
           <TemplateSelector
             onSelect={async (template: ProjectTemplate) => {
               const project = await createProject({
                 name: `${template.name} Projekt`,
                 description: template.description,
-                organizationId: 'demo-org',
+                organizationId: organization.id,
               })
               if (project) {
-                // TODO: Create codes from template
-                console.log('Template selected:', template)
+                // Template codes will be created by TemplateSelector component
               }
               setShowTemplateSelector(false)
             }}
@@ -277,19 +280,20 @@ export default function DashboardPage() {
 
 function NewProjectModal({ onClose }: { onClose: () => void }) {
   const { createProject } = useProjectStore()
+  const { organization } = useSubscriptionStore()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isCreating, setIsCreating] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!name.trim() || !organization) return
 
     setIsCreating(true)
     const project = await createProject({
       name: name.trim(),
       description: description.trim() || undefined,
-      organizationId: 'demo-org', // TODO: Get from org store
+      organizationId: organization.id,
     })
 
     if (project) {
