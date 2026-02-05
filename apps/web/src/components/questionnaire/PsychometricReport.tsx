@@ -17,24 +17,15 @@ import {
   IconChartPie,
   IconNetwork,
   IconCheck,
-  IconX,
-  IconAlertTriangle,
-  IconMinus,
   IconDownload,
   IconPrinter,
-  IconShare,
   IconChevronDown,
   IconChevronRight,
-  IconInfoCircle,
   IconTrendingUp,
-  IconTrendingDown,
 } from '@tabler/icons-react'
 
 import {
   Scale,
-  ReliabilityResult,
-  FactorAnalysisResult,
-  ItemStatistics,
 } from '@services/questionnaire/types'
 
 import { ComprehensivePsychometricReport } from '@services/questionnaire/PsychometricEngine'

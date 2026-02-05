@@ -27,31 +27,18 @@ import {
   IconX,
   IconCheck,
   IconAlertTriangle,
-  IconInfoCircle,
   IconExternalLink,
-  IconCopy,
-  IconTrash,
-  IconEdit,
-  IconEye,
-  IconPlayerPlay,
   IconBook,
   IconSparkles,
-  IconFilter,
-  IconSortAscending,
   IconRefresh,
 } from '@tabler/icons-react'
 
 import {
   Scale,
-  ScaleItem,
-  ConstructDefinition,
-  ReliabilityResult,
-  ValidationStudyPlan,
 } from '@services/questionnaire/types'
 
 import {
   ZISRepository,
-  ZISSearchResult,
   ZIS_SCALES_DATABASE,
 } from '@services/questionnaire/repositories'
 

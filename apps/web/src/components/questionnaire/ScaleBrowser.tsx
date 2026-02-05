@@ -13,7 +13,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import {
   IconSearch,
-  IconFilter,
   IconX,
   IconChevronDown,
   IconChevronRight,
@@ -23,13 +22,6 @@ import {
   IconPlus,
   IconStar,
   IconStarFilled,
-  IconAdjustments,
-  IconLanguage,
-  IconUsers,
-  IconChartBar,
-  IconBook,
-  IconInfoCircle,
-  IconArrowRight,
   IconColumns,
   IconLayoutList,
 } from '@tabler/icons-react'
@@ -37,12 +29,8 @@ import {
 import {
   ZISRepository,
   ZISScale,
-  ZISSearchOptions,
-  ZISSearchResult,
   ZIS_SCALES_DATABASE,
 } from '@services/questionnaire/repositories'
-
-import { Scale } from '@services/questionnaire/types'
 
 // ============================================================================
 // TYPES
@@ -151,7 +139,7 @@ const TRANSLATIONS = {
 // ============================================================================
 
 export const ScaleBrowser: React.FC<ScaleBrowserProps> = ({
-  onSelectScale,
+  onSelectScale: _onSelectScale,
   onAdaptScale,
   onOpenNexus,
   language = 'de',
@@ -163,7 +151,7 @@ export const ScaleBrowser: React.FC<ScaleBrowserProps> = ({
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('name')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
-  const [showFilters, setShowFilters] = useState(false)
+  const [_showFilters, _setShowFilters] = useState(false)
   const [expandedScale, setExpandedScale] = useState<string | null>(null)
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set())
@@ -453,11 +441,11 @@ const ScaleListItem: React.FC<ScaleListItemProps> = ({
   scale,
   isExpanded,
   isFavorite,
-  isSelectedForCompare,
+  isSelectedForCompare: _isSelectedForCompare,
   copiedId,
   onToggleExpand,
   onToggleFavorite,
-  onToggleCompare,
+  onToggleCompare: _onToggleCompare,
   onAdapt,
   onCopyItems,
   language,
@@ -645,7 +633,7 @@ const ScaleGridItem: React.FC<ScaleGridItemProps> = ({
   onToggleFavorite,
   language,
 }) => {
-  const t = TRANSLATIONS[language]
+  const _t = TRANSLATIONS[language]
 
   return (
     <button

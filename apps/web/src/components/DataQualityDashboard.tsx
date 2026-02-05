@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   PieChart, Pie, Cell, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
 import {
   IconFileText, IconCategory, IconCode, IconHash, IconChartBar,
-  IconBrain, IconLink, IconSearch, IconLoader2, IconRefresh,
+  IconBrain, IconLink, IconSearch, IconLoader2,
   IconBulb, IconNetwork
 } from '@tabler/icons-react'
 import { RealDataExtractor, type RealProjectData } from '@/services/RealDataExtractor'
