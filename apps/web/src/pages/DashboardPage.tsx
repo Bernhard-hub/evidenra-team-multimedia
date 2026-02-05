@@ -279,32 +279,47 @@ export default function DashboardPage() {
 }
 
 function NewProjectModal({ onClose }: { onClose: () => void }) {
-  const { createProject } = useProjectStore()
+  const { createProject, error: projectError } = useProjectStore()
   const { user } = useAuthStore()
-  const { organization, createOrganization } = useSubscriptionStore()
+  const { organization, createOrganization, error: orgError } = useSubscriptionStore()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !user) return
+    setLocalError(null)
+
+    if (!name.trim()) {
+      setLocalError('Bitte Projektnamen eingeben')
+      return
+    }
+    if (!user) {
+      setLocalError('Nicht angemeldet')
+      return
+    }
 
     setIsCreating(true)
 
     // Auto-create organization if user doesn't have one
     let orgId = organization?.id
     if (!orgId) {
+      console.log('Creating organization for user:', user.id)
       const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Mein'
       const newOrg = await createOrganization(`${userName}s Workspace`, user.id)
       if (newOrg) {
         orgId = newOrg.id
+        console.log('Organization created:', orgId)
       } else {
+        console.error('Failed to create organization')
+        setLocalError('Organisation konnte nicht erstellt werden. Bitte erneut versuchen.')
         setIsCreating(false)
         return
       }
     }
 
+    console.log('Creating project with orgId:', orgId)
     const project = await createProject({
       name: name.trim(),
       description: description.trim() || undefined,
@@ -312,10 +327,16 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
     })
 
     if (project) {
+      console.log('Project created:', project.id)
       onClose()
+    } else {
+      console.error('Failed to create project')
+      setLocalError('Projekt konnte nicht erstellt werden.')
     }
     setIsCreating(false)
   }
+
+  const displayError = localError || orgError || projectError
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -326,6 +347,11 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {displayError && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {displayError}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-surface-300 mb-1.5">
               Projektname *
