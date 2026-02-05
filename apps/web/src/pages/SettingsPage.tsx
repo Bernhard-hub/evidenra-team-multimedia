@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Layout from '@/components/Layout'
 import { useAuthStore } from '@/stores/authStore'
 import { claude } from '@/lib/claude'
 import { hasOpenAIKey, setOpenAIKey, clearOpenAIKey } from '@/lib/transcription'
+import {
+  useSubscriptionStore,
+  useIsTrialing,
+  useTrialDaysLeft,
+  useHasActiveSubscription,
+  usePlanName
+} from '@/stores/subscriptionStore'
+import { openCustomerPortal, getPlanById } from '@/lib/stripe'
 
 type SettingsTab = 'profile' | 'organization' | 'api' | 'notifications'
 
@@ -195,12 +204,125 @@ function ProfileSettings({ user }: { user: any }) {
 }
 
 function OrganizationSettings() {
-  const [orgName, setOrgName] = useState('Forschungsteam Berlin')
+  const navigate = useNavigate()
+  const organization = useSubscriptionStore(state => state.organization)
+  const subscription = useSubscriptionStore(state => state.subscription)
+  const planLimits = useSubscriptionStore(state => state.planLimits)
+  const memberRole = useSubscriptionStore(state => state.memberRole)
+  const isTrialing = useIsTrialing()
+  const trialDaysLeft = useTrialDaysLeft()
+  const hasActive = useHasActiveSubscription()
+  const planName = usePlanName()
+
+  const [orgName, setOrgName] = useState('')
+  const [isLoadingPortal, setIsLoadingPortal] = useState(false)
+  const [portalError, setPortalError] = useState<string | null>(null)
+
+  // Set org name from store
+  useEffect(() => {
+    if (organization?.name) {
+      setOrgName(organization.name)
+    }
+  }, [organization?.name])
+
+  // Get plan details
+  const plan = subscription?.planId ? getPlanById(subscription.planId) : null
+  const price = plan
+    ? subscription?.billingCycle === 'yearly'
+      ? Math.round(plan.priceYearly / 12)
+      : plan.priceMonthly
+    : 0
+
+  // Format next billing date
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '—'
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })
+  }
+
+  // Get status display
+  const getStatusBadge = () => {
+    if (!subscription) return null
+
+    if (isTrialing) {
+      const isUrgent = trialDaysLeft <= 3
+      return (
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+          isUrgent
+            ? 'bg-amber-500/10 text-amber-400'
+            : 'bg-primary-500/10 text-primary-400'
+        }`}>
+          Trial • {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'}
+        </span>
+      )
+    }
+
+    if (subscription.status === 'active') {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400">
+          {planName} • Aktiv
+        </span>
+      )
+    }
+
+    if (subscription.status === 'past_due') {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400">
+          Zahlung ausstehend
+        </span>
+      )
+    }
+
+    if (subscription.status === 'canceled' || subscription.status === 'expired') {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-surface-700 text-surface-400">
+          Beendet
+        </span>
+      )
+    }
+
+    return null
+  }
+
+  // Handle billing portal
+  const handleManageSubscription = async () => {
+    if (!subscription?.stripeCustomerId) {
+      // No Stripe customer - redirect to pricing
+      navigate('/pricing')
+      return
+    }
+
+    setIsLoadingPortal(true)
+    setPortalError(null)
+
+    const result = await openCustomerPortal(subscription.stripeCustomerId)
+
+    if ('error' in result) {
+      setPortalError(result.error)
+      setIsLoadingPortal(false)
+    } else {
+      window.location.href = result.url
+    }
+  }
+
+  // Copy org ID to clipboard
+  const copyOrgId = () => {
+    if (organization?.id) {
+      navigator.clipboard.writeText(organization.id)
+    }
+  }
 
   return (
     <div className="space-y-6">
       <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
-        <h2 className="text-lg font-semibold text-surface-100 mb-6">Organisation</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-surface-100">Organisation</h2>
+          {memberRole && (
+            <span className="px-2 py-1 rounded text-xs font-medium bg-surface-800 text-surface-400 capitalize">
+              {memberRole}
+            </span>
+          )}
+        </div>
 
         <div className="space-y-4 max-w-md">
           <div>
@@ -217,11 +339,15 @@ function OrganizationSettings() {
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                value="org_xK9mL2nP"
+                value={organization?.id || '—'}
                 disabled
                 className="flex-1 px-4 py-2.5 rounded-lg bg-surface-800/50 border border-surface-700 text-surface-400 font-mono text-sm cursor-not-allowed"
               />
-              <button className="p-2.5 rounded-lg border border-surface-700 text-surface-400 hover:bg-surface-800">
+              <button
+                onClick={copyOrgId}
+                className="p-2.5 rounded-lg border border-surface-700 text-surface-400 hover:bg-surface-800"
+                title="ID kopieren"
+              >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
@@ -241,29 +367,112 @@ function OrganizationSettings() {
       <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-surface-100">Abonnement</h2>
-          <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary-500/10 text-primary-400">
-            Team Pro
-          </span>
+          {getStatusBadge()}
         </div>
+
+        {/* Trial Banner */}
+        {isTrialing && (
+          <div className={`mb-6 p-4 rounded-xl ${
+            trialDaysLeft <= 3
+              ? 'bg-amber-500/10 border border-amber-500/20'
+              : 'bg-primary-500/10 border border-primary-500/20'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`font-medium ${trialDaysLeft <= 3 ? 'text-amber-400' : 'text-primary-400'}`}>
+                  {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'} verbleibend in deinem Trial
+                </p>
+                <p className="text-sm text-surface-400 mt-1">
+                  Upgrade jetzt für unbegrenzten Zugriff
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium"
+              >
+                Jetzt upgraden
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Past Due Warning */}
+        {subscription?.status === 'past_due' && (
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <p className="font-medium text-red-400">Zahlung fehlgeschlagen</p>
+                <p className="text-sm text-surface-400">Bitte aktualisiere deine Zahlungsmethode</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-3 mb-6">
           <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-sm text-surface-400">Monatliche Kosten</p>
-            <p className="text-2xl font-bold text-surface-100 mt-1">€49</p>
+            <p className="text-sm text-surface-400">
+              {subscription?.billingCycle === 'yearly' ? 'Monatlich (Jahresabo)' : 'Monatliche Kosten'}
+            </p>
+            <p className="text-2xl font-bold text-surface-100 mt-1">
+              {hasActive ? `€${price}` : '—'}
+            </p>
           </div>
           <div className="p-4 rounded-lg bg-surface-800">
-            <p className="text-sm text-surface-400">Nächste Abrechnung</p>
-            <p className="text-2xl font-bold text-surface-100 mt-1">15. Feb</p>
+            <p className="text-sm text-surface-400">
+              {isTrialing ? 'Trial endet am' : 'Nächste Abrechnung'}
+            </p>
+            <p className="text-2xl font-bold text-surface-100 mt-1">
+              {isTrialing
+                ? formatDate(subscription?.trialEnd || null)
+                : formatDate(subscription?.currentPeriodEnd || null)
+              }
+            </p>
           </div>
           <div className="p-4 rounded-lg bg-surface-800">
             <p className="text-sm text-surface-400">Teammitglieder</p>
-            <p className="text-2xl font-bold text-surface-100 mt-1">4 / 10</p>
+            <p className="text-2xl font-bold text-surface-100 mt-1">
+              {subscription?.seatsUsed || 1} / {planLimits?.maxSeats || '—'}
+            </p>
           </div>
         </div>
 
-        <button className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium">
-          Abonnement verwalten
-        </button>
+        {/* Error Message */}
+        {portalError && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            {portalError}
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          {subscription?.stripeCustomerId ? (
+            <button
+              onClick={handleManageSubscription}
+              disabled={isLoadingPortal}
+              className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium disabled:opacity-50"
+            >
+              {isLoadingPortal ? 'Laden...' : 'Abonnement verwalten'}
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/pricing')}
+              className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium"
+            >
+              Plan auswählen
+            </button>
+          )}
+
+          {hasActive && !isTrialing && (
+            <button
+              onClick={() => navigate('/pricing')}
+              className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium"
+            >
+              Plan wechseln
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

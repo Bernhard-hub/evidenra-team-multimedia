@@ -14,9 +14,12 @@ import {
   IconFileText,
   IconCategory,
   IconCode as IconCodeIcon,
-  IconSearch
+  IconSearch,
+  IconBook,
+  IconArrowRight
 } from '@tabler/icons-react'
 import { AntiHallucinationService } from '@services/AntiHallucinationService'
+import { useNexusWorkflowContext } from '@/contexts/MethodologyContext'
 
 interface ChatMessage {
   id: string
@@ -64,6 +67,9 @@ export const NexusAIChat: React.FC<NexusAIChatProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Workflow context integration
+  const { hasWorkflowContext, currentStep, buildNexusPrompt, getWorkflowContext } = useNexusWorkflowContext()
 
   const t = language === 'de' ? {
     title: 'NEXUS AI',
@@ -121,7 +127,20 @@ I'm your **research assistant** for qualitative analysis.
 Use the quick actions below or ask me a question!`
   }
 
+  // Workflow-aware quick action for current step
+  const workflowContext = getWorkflowContext()
+  const workflowQuickAction: QuickAction | null = hasWorkflowContext && currentStep ? {
+    icon: <IconBook size={16} />,
+    label: language === 'de' ? `Hilfe: ${currentStep.nameDE}` : `Help: ${currentStep.name}`,
+    prompt: language === 'de'
+      ? `Ich arbeite gerade am Schritt "${currentStep.nameDE}" (${workflowContext?.methodologyDE}). Kannst du mir dabei helfen? Was sollte ich beachten und wie gehe ich am besten vor?`
+      : `I'm currently working on the step "${currentStep.name}" (${workflowContext?.methodology}). Can you help me with this? What should I consider and what's the best approach?`,
+    color: 'from-indigo-500 to-purple-500'
+  } : null
+
   const quickActions: QuickAction[] = [
+    // Show workflow-specific action first if available
+    ...(workflowQuickAction ? [workflowQuickAction] : []),
     {
       icon: <IconFileText size={16} />,
       label: t.summarizeDocs,
@@ -261,17 +280,38 @@ Use the quick actions below or ask me a question!`
     try {
       const researchContext = buildResearchContext()
 
+      // Build workflow context if available
+      const workflowContextStr = hasWorkflowContext && workflowContext ? `
+
+[AKTIVER WORKFLOW]
+Methode: ${workflowContext.methodologyDE} (${workflowContext.methodology})
+Aktueller Schritt: ${workflowContext.currentStepDE} (Schritt ${workflowContext.stepIndex + 1} von ${workflowContext.totalSteps})
+Fortschritt: ${Math.round(workflowContext.progress)}%
+
+Beschreibung dieses Schritts:
+${workflowContext.stepDescriptionDE}
+
+Aufgaben in diesem Schritt:
+${workflowContext.tasksDE.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+${workflowContext.tipsDE.length > 0 ? `Tipps für diesen Schritt:\n${workflowContext.tipsDE.map(t => `• ${t}`).join('\n')}` : ''}
+
+Der Nutzer arbeitet aktiv an diesem Workflow-Schritt. Gib kontextbezogene, praktische Hilfe die speziell für diesen Schritt relevant ist.
+[/AKTIVER WORKFLOW]
+` : ''
+
       const systemPrompt = `Du bist NEXUS AI, ein wissenschaftlicher Forschungsassistent für qualitative Analysen.
 
 ${AntiHallucinationService.generateSystemPromptAddition(language)}
 
 ${researchContext}
-
+${workflowContextStr}
 Antworte immer:
 - Basierend auf den echten Projektdaten
 - In ${language === 'de' ? 'Deutsch' : 'English'}
 - Strukturiert mit Markdown
-- Hilfreich und wissenschaftlich fundiert`
+- Hilfreich und wissenschaftlich fundiert
+${hasWorkflowContext ? '- Beziehe dich auf den aktuellen Workflow-Schritt und gib spezifische Hilfe' : ''}`
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -410,6 +450,15 @@ Antworte immer:
             <h3 className="text-sm font-bold text-white">{t.title}</h3>
             <p className="text-xs text-slate-400">{t.subtitle}</p>
           </div>
+          {/* Workflow context indicator */}
+          {hasWorkflowContext && currentStep && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30">
+              <IconBook size={12} className="text-indigo-400" />
+              <span className="text-xs text-indigo-300 max-w-[80px] truncate">
+                {language === 'de' ? currentStep.nameDE : currentStep.name}
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -567,19 +616,28 @@ Antworte immer:
         </div>
 
         {/* Context info */}
-        <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            <IconFileText size={12} />
-            {context.documents.length}
-          </span>
-          <span className="flex items-center gap-1">
-            <IconCategory size={12} />
-            {context.codes.length}
-          </span>
-          <span className="flex items-center gap-1">
-            <IconCodeIcon size={12} />
-            {context.codings.length}
-          </span>
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            <span className="flex items-center gap-1">
+              <IconFileText size={12} />
+              {context.documents.length}
+            </span>
+            <span className="flex items-center gap-1">
+              <IconCategory size={12} />
+              {context.codes.length}
+            </span>
+            <span className="flex items-center gap-1">
+              <IconCodeIcon size={12} />
+              {context.codings.length}
+            </span>
+          </div>
+          {/* Workflow context active indicator */}
+          {hasWorkflowContext && (
+            <div className="flex items-center gap-1 text-xs text-indigo-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              <span>{language === 'de' ? 'Workflow-Kontext aktiv' : 'Workflow context active'}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

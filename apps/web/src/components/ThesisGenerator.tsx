@@ -11,7 +11,11 @@ import {
   IconCopy,
   IconRefresh,
   IconFileText,
-  IconSettings
+  IconSettings,
+  IconShieldCheck,
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconInfoCircle
 } from '@tabler/icons-react'
 import {
   MasterThesisGenerator,
@@ -20,6 +24,10 @@ import {
   type ChapterSection,
   type ResearchData
 } from '@services/MasterThesisGenerator'
+import {
+  CitationValidatorUltra,
+  type ArticleValidationReport
+} from '@services/CitationValidatorUltra'
 
 interface ThesisGeneratorProps {
   apiKey: string
@@ -78,6 +86,9 @@ export const ThesisGenerator: React.FC<ThesisGeneratorProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [copiedSection, setCopiedSection] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [validationReport, setValidationReport] = useState<ArticleValidationReport | null>(null)
+  const [isValidating, setIsValidating] = useState(false)
+  const [showValidation, setShowValidation] = useState(false)
 
   const chapters = CHAPTER_TEMPLATES.de
   const levelConfig = ACADEMIC_LEVELS.find(l => l.id === config.academicLevel)!
@@ -183,6 +194,73 @@ export const ThesisGenerator: React.FC<ThesisGeneratorProps> = ({
     URL.revokeObjectURL(url)
   }
 
+  // Validate citations in all generated chapters
+  const validateCitations = useCallback(async () => {
+    if (generatedChapters.size === 0) return
+
+    setIsValidating(true)
+    setShowValidation(true)
+
+    try {
+      // Combine all chapter content
+      let fullText = ''
+      for (const [, chapter] of generatedChapters) {
+        fullText += chapter.sections.map(s => s.content).join('\n\n')
+      }
+
+      // Prepare documents for validation
+      const documents = (researchData.documents || []).map(doc => ({
+        name: doc.name || doc.id || 'Unknown',
+        content: doc.content || ''
+      }))
+
+      if (documents.length === 0) {
+        setValidationReport({
+          totalCitations: 0,
+          validCitations: 0,
+          invalidCitations: 0,
+          suspiciousCitations: 0,
+          validationRate: 0,
+          citationScore: 0,
+          levelBreakdown: { level1: 0, level2: 0, level3: 0, level4: 0, level5: 0 },
+          results: [],
+          hallucinations: [],
+          warnings: [],
+          autoFixSuggestions: [],
+          summary: 'Keine Quelldokumente vorhanden für Validierung.',
+          skipped: true,
+          skipReason: 'Keine Dokumente in Forschungsdaten verfügbar'
+        })
+        return
+      }
+
+      // Run validation
+      const report = CitationValidatorUltra.validateArticle(fullText, documents)
+      setValidationReport(report)
+
+    } catch (err) {
+      console.error('Validation error:', err)
+      setValidationReport({
+        totalCitations: 0,
+        validCitations: 0,
+        invalidCitations: 0,
+        suspiciousCitations: 0,
+        validationRate: 0,
+        citationScore: 0,
+        levelBreakdown: { level1: 0, level2: 0, level3: 0, level4: 0, level5: 0 },
+        results: [],
+        hallucinations: [],
+        warnings: ['Fehler bei der Validierung: ' + (err as Error).message],
+        autoFixSuggestions: [],
+        summary: 'Validierung fehlgeschlagen',
+        skipped: true,
+        skipReason: (err as Error).message
+      })
+    } finally {
+      setIsValidating(false)
+    }
+  }, [generatedChapters, researchData])
+
   // Export all chapters
   const exportAllChapters = () => {
     let fullMarkdown = `# ${config.title}\n\n`
@@ -226,13 +304,27 @@ export const ThesisGenerator: React.FC<ThesisGeneratorProps> = ({
           </div>
           <div className="flex items-center gap-2">
             {generatedChapters.size > 0 && (
-              <button
-                onClick={exportAllChapters}
-                className="px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 text-sm font-medium flex items-center gap-2"
-              >
-                <IconDownload size={16} />
-                Alle exportieren
-              </button>
+              <>
+                <button
+                  onClick={validateCitations}
+                  disabled={isValidating}
+                  className="px-3 py-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 text-sm font-medium flex items-center gap-2"
+                >
+                  {isValidating ? (
+                    <IconLoader2 size={16} className="animate-spin" />
+                  ) : (
+                    <IconShieldCheck size={16} />
+                  )}
+                  Zitate prüfen
+                </button>
+                <button
+                  onClick={exportAllChapters}
+                  className="px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 text-sm font-medium flex items-center gap-2"
+                >
+                  <IconDownload size={16} />
+                  Alle exportieren
+                </button>
+              </>
             )}
             <button
               onClick={() => setShowSettings(!showSettings)}
@@ -543,6 +635,138 @@ export const ThesisGenerator: React.FC<ThesisGeneratorProps> = ({
           {/* Step 3: Preview */}
           {activeStep === 'preview' && (
             <div className="space-y-6">
+              {/* Validation Panel */}
+              {showValidation && validationReport && (
+                <div className="rounded-xl border border-slate-700 overflow-hidden">
+                  <div className={`p-4 flex items-center justify-between ${
+                    validationReport.skipped
+                      ? 'bg-slate-800'
+                      : validationReport.validationRate >= 0.8
+                        ? 'bg-green-500/10'
+                        : validationReport.validationRate >= 0.5
+                          ? 'bg-amber-500/10'
+                          : 'bg-red-500/10'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      {validationReport.skipped ? (
+                        <IconInfoCircle size={24} className="text-slate-400" />
+                      ) : validationReport.validationRate >= 0.8 ? (
+                        <IconCircleCheck size={24} className="text-green-400" />
+                      ) : validationReport.validationRate >= 0.5 ? (
+                        <IconAlertTriangle size={24} className="text-amber-400" />
+                      ) : (
+                        <IconAlertTriangle size={24} className="text-red-400" />
+                      )}
+                      <div>
+                        <h3 className="font-bold text-white">Zitat-Validierung</h3>
+                        <p className="text-sm text-slate-400">
+                          {validationReport.skipped
+                            ? validationReport.skipReason
+                            : validationReport.summary}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowValidation(false)}
+                      className="p-2 rounded-lg hover:bg-slate-700 text-slate-400"
+                    >
+                      <IconX size={18} />
+                    </button>
+                  </div>
+
+                  {!validationReport.skipped && validationReport.totalCitations > 0 && (
+                    <div className="p-4 space-y-4">
+                      {/* Score & Stats */}
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="text-center p-3 rounded-lg bg-slate-800/50">
+                          <div className={`text-2xl font-bold ${
+                            validationReport.citationScore >= 80 ? 'text-green-400' :
+                            validationReport.citationScore >= 50 ? 'text-amber-400' : 'text-red-400'
+                          }`}>
+                            {validationReport.citationScore}
+                          </div>
+                          <div className="text-xs text-slate-500">Score</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-slate-800/50">
+                          <div className="text-2xl font-bold text-green-400">{validationReport.validCitations}</div>
+                          <div className="text-xs text-slate-500">Valide</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-slate-800/50">
+                          <div className="text-2xl font-bold text-amber-400">{validationReport.suspiciousCitations}</div>
+                          <div className="text-xs text-slate-500">Verdächtig</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-slate-800/50">
+                          <div className="text-2xl font-bold text-red-400">{validationReport.invalidCitations}</div>
+                          <div className="text-xs text-slate-500">Ungültig</div>
+                        </div>
+                      </div>
+
+                      {/* Level Breakdown */}
+                      <div className="p-3 rounded-lg bg-slate-800/30">
+                        <h4 className="text-sm font-medium text-slate-300 mb-2">5-Level Validierung</h4>
+                        <div className="flex gap-2 text-xs">
+                          <span className="px-2 py-1 rounded bg-green-500/20 text-green-400">
+                            L1: {validationReport.levelBreakdown.level1}
+                          </span>
+                          <span className="px-2 py-1 rounded bg-blue-500/20 text-blue-400">
+                            L2: {validationReport.levelBreakdown.level2}
+                          </span>
+                          <span className="px-2 py-1 rounded bg-purple-500/20 text-purple-400">
+                            L3: {validationReport.levelBreakdown.level3}
+                          </span>
+                          <span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400">
+                            L4: {validationReport.levelBreakdown.level4}
+                          </span>
+                          <span className="px-2 py-1 rounded bg-slate-500/20 text-slate-400">
+                            L5: {validationReport.levelBreakdown.level5}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Hallucinations Warning */}
+                      {validationReport.hallucinations.length > 0 && (
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                          <h4 className="text-sm font-medium text-red-400 mb-2 flex items-center gap-2">
+                            <IconAlertTriangle size={16} />
+                            Mögliche Halluzinationen ({validationReport.hallucinations.length})
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            {validationReport.hallucinations.slice(0, 5).map((h, i) => (
+                              <li key={i} className="text-slate-300">
+                                <span className="text-red-300 font-mono text-xs">
+                                  {h.citation.fullCitation}
+                                </span>
+                                <span className="text-slate-500 ml-2">— {h.issue}</span>
+                              </li>
+                            ))}
+                            {validationReport.hallucinations.length > 5 && (
+                              <li className="text-slate-500">
+                                ...und {validationReport.hallucinations.length - 5} weitere
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Recommendation */}
+                      <div className={`p-3 rounded-lg text-sm ${
+                        validationReport.validationRate >= 0.8
+                          ? 'bg-green-500/10 text-green-300'
+                          : validationReport.validationRate >= 0.5
+                            ? 'bg-amber-500/10 text-amber-300'
+                            : 'bg-red-500/10 text-red-300'
+                      }`}>
+                        {validationReport.validationRate >= 0.8
+                          ? 'Exzellent! Zitate sind gut belegt. Export empfohlen.'
+                          : validationReport.validationRate >= 0.5
+                            ? 'Mittlere Qualität. Verdächtige Einträge vor Export prüfen.'
+                            : 'Probleme erkannt. Manuelle Überprüfung vor Export erforderlich.'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {generatedChapters.size === 0 ? (
                 <div className="text-center py-12">
                   <IconFileText size={48} className="mx-auto text-slate-600 mb-4" />

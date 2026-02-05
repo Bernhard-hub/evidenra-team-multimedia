@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Layout from '@/components/Layout'
-import DocumentViewer from '@/components/DocumentViewer'
+import DocumentViewerWithParaphrases from '@/components/DocumentViewerWithParaphrases'
 import CodeManager from '@/components/CodeManager'
 import AICodingPanel from '@/components/AICodingPanel'
 import PresenceIndicator, { ConnectionStatus } from '@/components/PresenceIndicator'
 import { runAICoding, claude, type CodingMethod } from '@/lib/claude'
 import { useProjectStore } from '@/stores/projectStore'
+import { useParaphraseStore } from '@/stores/paraphraseStore'
 import { useRealtime } from '@/hooks/useRealtime'
 import { usePresence } from '@/hooks/usePresence'
+import { useMethodologyContext } from '@/contexts/MethodologyContext'
 
 // Local interface for DocumentViewer compatibility
 interface ViewerCoding {
@@ -53,6 +55,12 @@ export default function DocumentDetailPage() {
     createCodingsBatch,
   } = useProjectStore()
 
+  // Methodology context - ensures FloatingGuideButton shows on this page
+  const { setProjectId: setMethodologyProjectId } = useMethodologyContext()
+
+  // Paraphrase store
+  const { fetchParaphrases, fetchCategories, paraphrases } = useParaphraseStore()
+
   const [showAICoding, setShowAICoding] = useState(false)
   const [isAIProcessing, setIsAIProcessing] = useState(false)
   const [aiProgress, setAIProgress] = useState(0)
@@ -63,17 +71,26 @@ export default function DocumentDetailPage() {
   useRealtime({ projectId, documentId, enabled: true })
   const { onlineUsers, isConnected } = usePresence({ projectId, documentId, enabled: true })
 
+  // Set project ID in methodology context to show FloatingGuideButton
+  useEffect(() => {
+    if (projectId) {
+      setMethodologyProjectId(projectId)
+    }
+  }, [projectId, setMethodologyProjectId])
+
   // Fetch data on mount
   useEffect(() => {
     if (projectId) {
       fetchProject(projectId)
       fetchCodes(projectId)
+      fetchCategories(projectId)  // Paraphrase categories
     }
     if (documentId) {
       fetchDocument(documentId)
       fetchCodings(documentId)
+      fetchParaphrases(documentId)  // Paraphrases
     }
-  }, [projectId, documentId, fetchProject, fetchDocument, fetchCodes, fetchCodings])
+  }, [projectId, documentId, fetchProject, fetchDocument, fetchCodes, fetchCodings, fetchParaphrases, fetchCategories])
 
   // Convert store data to viewer format
   const viewerCodes: ViewerCode[] = codes.map((code) => ({
@@ -319,7 +336,7 @@ export default function DocumentDetailPage() {
             <h1 className="text-2xl font-bold text-surface-100">{currentDocument.name}</h1>
             <div className="flex items-center gap-4 mt-1">
               <p className="text-surface-400">
-                {currentDocument.wordCount} Wörter · {codings.length} Kodierungen
+                {currentDocument.wordCount} Wörter · {codings.length} Kodierungen · {paraphrases.filter(p => p.documentId === documentId).length} Paraphrasen
               </p>
               <ConnectionStatus isConnected={isConnected} />
             </div>
@@ -358,8 +375,10 @@ export default function DocumentDetailPage() {
               </div>
             </div>
           ) : (
-            <DocumentViewer
+            <DocumentViewerWithParaphrases
               content={currentDocument.content || ''}
+              documentId={documentId!}
+              projectId={projectId!}
               codings={viewerCodings}
               codes={viewerCodes}
               onAddCoding={handleAddCoding}

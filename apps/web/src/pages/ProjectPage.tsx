@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import Layout from '@/components/Layout'
 import IRRPanel from '@/components/IRRPanel'
 import ActivityFeed from '@/components/ActivityFeed'
@@ -17,16 +17,20 @@ import NexusAIChat from '@/components/NexusAIChat'
 import DataQualityDashboard from '@/components/DataQualityDashboard'
 import ThesisGenerator from '@/components/ThesisGenerator'
 import MethodologyGuide from '@/components/MethodologyGuide'
+import ParaphraseOverview from '@/components/ParaphraseOverview'
 import { useProjectStore, type Document, type Code } from '@/stores/projectStore'
 import { useMemoStore } from '@/stores/memoStore'
+import { useParaphraseStore } from '@/stores/paraphraseStore'
 import { useRealtime } from '@/hooks/useRealtime'
 import { usePresence } from '@/hooks/usePresence'
 import { useKeyboardShortcuts, type KeyboardShortcut } from '@/hooks/useKeyboardShortcuts'
+import { useMethodologyContext } from '@/contexts/MethodologyContext'
 
-type TabType = 'documents' | 'codes' | 'memos' | 'team' | 'analysis' | 'quality'
+type TabType = 'documents' | 'codes' | 'memos' | 'paraphrases' | 'team' | 'analysis' | 'quality'
 
 export default function ProjectPage() {
   const { projectId } = useParams()
+  const navigate = useNavigate()
   const {
     currentProject,
     documents,
@@ -42,6 +46,9 @@ export default function ProjectPage() {
     fetchCodings,
   } = useProjectStore()
 
+  // Methodology context for global workflow state
+  const { setProjectId: setMethodologyProjectId, isGuideOpen, openGuide, closeGuide, minimizeGuide } = useMethodologyContext()
+
   const [activeTab, setActiveTab] = useState<TabType>('documents')
   const [showExportModal, setShowExportModal] = useState(false)
   const [showNewDocument, setShowNewDocument] = useState(false)
@@ -51,10 +58,19 @@ export default function ProjectPage() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
   const [showNexusChat, setShowNexusChat] = useState(false)
   const [showThesisGenerator, setShowThesisGenerator] = useState(false)
-  const [showMethodologyGuide, setShowMethodologyGuide] = useState(false)
 
   // Get Claude API key from localStorage or env
   const claudeApiKey = localStorage.getItem('claude_api_key') || import.meta.env.VITE_ANTHROPIC_API_KEY || ''
+
+  // Set project ID in methodology context when project loads
+  useEffect(() => {
+    if (projectId) {
+      setMethodologyProjectId(projectId)
+    }
+    return () => {
+      // Don't clear on unmount - keep context for navigation to DocumentDetailPage
+    }
+  }, [projectId, setMethodologyProjectId])
 
   // Keyboard shortcuts
   const shortcuts: KeyboardShortcut[] = useMemo(() => [
@@ -64,16 +80,17 @@ export default function ProjectPage() {
     { key: 'r', ctrl: true, shift: true, action: () => setShowReportGenerator(true), description: 'Bericht erstellen', category: 'Allgemein' },
     { key: 'i', ctrl: true, shift: true, action: () => setShowNexusChat(prev => !prev), description: 'NEXUS AI öffnen', category: 'AI' },
     { key: 't', ctrl: true, shift: true, action: () => setShowThesisGenerator(true), description: 'Thesis Generator öffnen', category: 'AI' },
-    { key: 'm', ctrl: true, shift: true, action: () => setShowMethodologyGuide(true), description: 'Methoden-Guide öffnen', category: 'Hilfe' },
+    { key: 'm', ctrl: true, shift: true, action: () => openGuide(), description: 'Methoden-Guide öffnen', category: 'Hilfe' },
     { key: '?', ctrl: true, action: () => setShowShortcutsHelp(true), description: 'Shortcuts anzeigen', category: 'Hilfe' },
     { key: '1', ctrl: true, action: () => setActiveTab('documents'), description: 'Dokumente Tab', category: 'Navigation' },
     { key: '2', ctrl: true, action: () => setActiveTab('codes'), description: 'Codes Tab', category: 'Navigation' },
     { key: '3', ctrl: true, action: () => setActiveTab('memos'), description: 'Memos Tab', category: 'Navigation' },
-    { key: '4', ctrl: true, action: () => setActiveTab('team'), description: 'Team Tab', category: 'Navigation' },
-    { key: '5', ctrl: true, action: () => setActiveTab('analysis'), description: 'Analyse Tab', category: 'Navigation' },
-    { key: '6', ctrl: true, action: () => setActiveTab('quality'), description: 'Qualität Tab', category: 'Navigation' },
-    { key: 'Escape', action: () => { setShowSearch(false); setShowExportModal(false); setShowNewDocument(false); setShowReportGenerator(false); setShowShortcutsHelp(false); setShowNexusChat(false); setShowThesisGenerator(false); setShowMethodologyGuide(false) }, description: 'Dialoge schließen', category: 'Navigation' },
-  ], [])
+    { key: '4', ctrl: true, action: () => setActiveTab('paraphrases'), description: 'Paraphrasen Tab', category: 'Navigation' },
+    { key: '5', ctrl: true, action: () => setActiveTab('team'), description: 'Team Tab', category: 'Navigation' },
+    { key: '6', ctrl: true, action: () => setActiveTab('analysis'), description: 'Analyse Tab', category: 'Navigation' },
+    { key: '7', ctrl: true, action: () => setActiveTab('quality'), description: 'Qualität Tab', category: 'Navigation' },
+    { key: 'Escape', action: () => { setShowSearch(false); setShowExportModal(false); setShowNewDocument(false); setShowReportGenerator(false); setShowShortcutsHelp(false); setShowNexusChat(false); setShowThesisGenerator(false); closeGuide() }, description: 'Dialoge schließen', category: 'Navigation' },
+  ], [openGuide, closeGuide])
 
   useKeyboardShortcuts(shortcuts)
 
@@ -104,10 +121,22 @@ export default function ProjectPage() {
     }
   }, [projectId, fetchMemos])
 
+  // Fetch paraphrase categories
+  const { paraphrases, fetchCategories } = useParaphraseStore()
+  useEffect(() => {
+    if (projectId) {
+      fetchCategories(projectId)
+    }
+  }, [projectId, fetchCategories])
+
+  // Count paraphrases for this project
+  const projectParaphraseCount = paraphrases.filter(p => p.projectId === projectId).length
+
   const tabs: { id: TabType; name: string; count?: number }[] = [
     { id: 'documents', name: 'Dokumente', count: documents.length },
     { id: 'codes', name: 'Codes', count: codes.length },
     { id: 'memos', name: 'Memos', count: memos.length },
+    { id: 'paraphrases', name: 'Paraphrasen', count: projectParaphraseCount },
     { id: 'team', name: 'Team', count: 4 },
     { id: 'analysis', name: 'Analyse' },
     { id: 'quality', name: 'Qualität' },
@@ -208,7 +237,7 @@ export default function ProjectPage() {
                   </svg>
                 </button>
                 <button
-                  onClick={() => setShowMethodologyGuide(true)}
+                  onClick={() => openGuide()}
                   className="px-4 py-2 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-sm font-medium flex items-center gap-2"
                   title="Methoden-Guide (Ctrl+Shift+M)"
                 >
@@ -269,6 +298,9 @@ export default function ProjectPage() {
             )}
             {activeTab === 'memos' && projectId && (
               <MemoPanel projectId={projectId} showAllMemos />
+            )}
+            {activeTab === 'paraphrases' && projectId && (
+              <ParaphraseOverview projectId={projectId} />
             )}
             {activeTab === 'team' && projectId && (
               <TeamManager projectId={projectId} />
@@ -424,13 +456,31 @@ export default function ProjectPage() {
           />
         )}
 
-        {/* Methodology Guide */}
+        {/* Methodology Guide - Intelligenter Workflow-Begleiter */}
         {projectId && (
           <MethodologyGuide
             projectId={projectId}
-            isOpen={showMethodologyGuide}
-            onClose={() => setShowMethodologyGuide(false)}
+            isOpen={isGuideOpen}
+            onClose={() => closeGuide()}
+            onMinimize={() => minimizeGuide()}
             language="de"
+            onOpenDocuments={() => setActiveTab('documents')}
+            onOpenCodes={() => setActiveTab('codes')}
+            onOpenMemos={() => setActiveTab('memos')}
+            onOpenAnalysis={() => setActiveTab('analysis')}
+            onOpenIRR={() => setActiveTab('analysis')}
+            onOpenNexus={() => setShowNexusChat(true)}
+            onOpenAICoding={() => {
+              if (documents.length > 0) {
+                navigate(`/project/${projectId}/document/${documents[0].id}`)
+              } else {
+                setActiveTab('documents')
+              }
+            }}
+            documentCount={documents.length}
+            codeCount={codes.length}
+            codingCount={currentProject?.codingCount || 0}
+            memoCount={memos.length}
           />
         )}
       </div>

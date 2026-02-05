@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { SubscriptionBanner } from '@/components/SubscriptionBanner'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -224,7 +225,10 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           {/* Right side actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Subscription/Trial Badge */}
+            <SubscriptionBanner variant="header" />
+
             {/* Notifications */}
             <button className="p-2 rounded-lg text-surface-400 hover:text-surface-100 hover:bg-surface-800 relative">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
