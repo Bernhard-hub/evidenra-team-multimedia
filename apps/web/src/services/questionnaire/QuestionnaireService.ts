@@ -42,6 +42,13 @@ import {
 
 export class ItemQualityAnalyzer {
   /**
+   * Analyze an item for quality issues (alias for analyzeItem)
+   */
+  static analyze(item: string, _language?: 'de' | 'en'): ItemQualityReport {
+    return this.analyzeItem(item)
+  }
+
+  /**
    * Analyze an item for quality issues
    */
   static analyzeItem(item: string): ItemQualityReport {

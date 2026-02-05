@@ -259,7 +259,7 @@ export const QuestionnaireWorkspace: React.FC<QuestionnaireWorkspaceProps> = ({
     if (!searchQuery.trim()) {
       return ZIS_SCALES_DATABASE
     }
-    return ZISRepository.search({ query: searchQuery, language })
+    return ZISRepository.search({ query: searchQuery, language: [language] })
   }, [searchQuery, language])
 
   // Recommended scales based on codes

@@ -759,17 +759,29 @@ export class ValidityMetrics {
 // ============================================================================
 
 export interface ComprehensivePsychometricReport {
+  sampleSize?: number
   reliability: {
     cronbachAlpha: number
     mcdonaldOmega: number
     splitHalf: number
     interpretation: string
+    guttmanLambda6?: number
+    itemTotalCorrelations?: number[]
+    alphaIfDeleted?: number[]
   }
   factorAnalysis: {
     suggestedFactors: number
+    optimalFactors?: number
     eigenvalues: number[]
     varianceExplained: number[]
     loadings: FactorLoading[]
+    factorLoadings?: FactorLoading[]
+    modelFit?: {
+      cfi?: number
+      tli?: number
+      rmsea?: number
+      srmr?: number
+    }
   }
   validity: {
     ave: number
@@ -778,6 +790,13 @@ export interface ComprehensivePsychometricReport {
     convergentOk: boolean
     discriminantOk: boolean
   }
+  itemStatistics?: {
+    itemId: string
+    mean: number
+    sd: number
+    skewness: number
+    kurtosis: number
+  }[]
   recommendations: string[]
 }
 

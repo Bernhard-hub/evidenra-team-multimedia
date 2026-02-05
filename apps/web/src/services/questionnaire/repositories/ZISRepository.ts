@@ -26,6 +26,7 @@ export interface ZISScale {
   doi: string
   name: string
   nameEn?: string
+  description?: string
   authors: string[]
   year: number
   construct: string
@@ -370,6 +371,9 @@ export interface ZISSearchResult {
   scale: ZISScale
   relevanceScore: number
   matchedOn: string[]
+  // Aliases for backwards compatibility
+  relevance?: number
+  matchedConstructs?: string[]
 }
 
 export class ZISRepository {

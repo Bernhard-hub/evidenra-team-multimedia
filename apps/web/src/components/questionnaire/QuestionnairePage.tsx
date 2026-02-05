@@ -230,7 +230,7 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
         points: zisScale.responseScale.points,
         labels: zisScale.responseScale.labels,
       },
-      language,
+      language: [language],
       version: '1.0',
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -270,7 +270,7 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
           ? ['Stimme gar nicht zu', 'Stimme nicht zu', 'Neutral', 'Stimme zu', 'Stimme voll zu']
           : ['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree'],
       },
-      language,
+      language: [language],
       version: '1.0',
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -290,13 +290,13 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
       id: `validation-${Date.now()}`,
       scaleId,
       scaleName: scale.name,
-      status: 'in-progress',
-      phases: {
-        contentValidity: { status: 'pending' },
-        cognitiveInterviews: { status: 'pending' },
-        pilotStudy: { status: 'pending' },
-        fullValidation: { status: 'pending' },
-      },
+      status: 'content-validity',
+      phases: [
+        { phase: 'content-validity', status: 'pending' },
+        { phase: 'cognitive-interviews', status: 'pending' },
+        { phase: 'pilot-study', status: 'pending' },
+        { phase: 'full-validation', status: 'pending' },
+      ],
       createdAt: new Date(),
       updatedAt: new Date(),
     }
