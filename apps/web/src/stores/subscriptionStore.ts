@@ -195,32 +195,36 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
         createdAt: org.created_at
       }
 
-      // 2. Fetch subscription for this organization
-      const { data: subData, error: subError } = await db
-        .from('organization_subscriptions')
-        .select('*')
-        .eq('organization_id', organization.id)
-        .single()
-
+      // 2. Fetch subscription for this organization (optional, don't block on errors)
       let subscription: Subscription | null = null
       let planId: PlanId = 'free'
 
-      if (subData && !subError) {
-        subscription = {
-          id: subData.id,
-          organizationId: subData.organization_id,
-          planId: subData.plan_id as PlanId,
-          status: subData.status as SubscriptionStatus,
-          billingCycle: subData.billing_cycle,
-          stripeCustomerId: subData.stripe_customer_id,
-          stripeSubscriptionId: subData.stripe_subscription_id,
-          currentPeriodStart: subData.current_period_start,
-          currentPeriodEnd: subData.current_period_end,
-          trialEnd: subData.trial_end,
-          canceledAt: subData.canceled_at,
-          seatsUsed: subData.seats_used || 1
+      try {
+        const { data: subData, error: subError } = await db
+          .from('organization_subscriptions')
+          .select('*')
+          .eq('organization_id', organization.id)
+          .maybeSingle()
+
+        if (subData && !subError) {
+          subscription = {
+            id: subData.id,
+            organizationId: subData.organization_id,
+            planId: subData.plan_id as PlanId,
+            status: subData.status as SubscriptionStatus,
+            billingCycle: subData.billing_cycle,
+            stripeCustomerId: subData.stripe_customer_id,
+            stripeSubscriptionId: subData.stripe_subscription_id,
+            currentPeriodStart: subData.current_period_start,
+            currentPeriodEnd: subData.current_period_end,
+            trialEnd: subData.trial_end,
+            canceledAt: subData.canceled_at,
+            seatsUsed: subData.seats_used || 1
+          }
+          planId = subscription.planId
         }
-        planId = subscription.planId
+      } catch (e) {
+        console.warn('Could not fetch subscription (non-critical):', e)
       }
 
       set({
