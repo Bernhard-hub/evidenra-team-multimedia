@@ -282,14 +282,14 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
       title: t.pilotStudy,
       description: t.pilotStudyDesc,
       icon: <IconChartBar size={20} />,
-      minSample: `n ≥ ${Math.max(50, scale.items.length * 5)}`,
+      minSample: `n ≥ ${Math.max(50, (scale.items?.length || 0) * 5)}`,
     },
     {
       id: 'full-validation' as Phase,
       title: t.fullValidation,
       description: t.fullValidationDesc,
       icon: <IconNetwork size={20} />,
-      minSample: `n ≥ ${Math.max(200, scale.items.length * 10)}`,
+      minSample: `n ≥ ${Math.max(200, (scale.items?.length || 0) * 10)}`,
     },
   ]
 
@@ -673,7 +673,8 @@ const PilotStudyPhaseContent: React.FC<PilotStudyPhaseContentProps> = ({
   language,
 }) => {
   const t = TRANSLATIONS[language]
-  const minSample = Math.max(50, scale.items.length * 5)
+  const itemCount = scale.items?.length || 0
+  const minSample = Math.max(50, itemCount * 5)
 
   if (!isEnabled) {
     return (
@@ -700,7 +701,7 @@ const PilotStudyPhaseContent: React.FC<PilotStudyPhaseContentProps> = ({
         <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
           <h4 className="text-xs font-medium text-slate-300 mb-2">{t.recommendation}:</h4>
           <ul className="text-xs text-slate-400 space-y-1">
-            <li>• n ≥ {minSample} ({scale.items.length} Items × 5)</li>
+            <li>• n ≥ {minSample} ({itemCount} Items × 5)</li>
             <li>• Cronbach's α ≥ 0.70</li>
             <li>• Item-Total r ≥ 0.30</li>
           </ul>
@@ -717,8 +718,8 @@ const PilotStudyPhaseContent: React.FC<PilotStudyPhaseContentProps> = ({
           <button
             onClick={() => onOpenNexus?.(
               language === 'de'
-                ? `Erkläre mir die Item-Analyse für meine Pilotstudie. Skala: "${scale.name}" mit ${scale.items.length} Items. Benötigte Stichprobe: n ≥ ${minSample}.`
-                : `Explain the item analysis for my pilot study. Scale: "${scale.name}" with ${scale.items.length} items. Required sample: n ≥ ${minSample}.`
+                ? `Erkläre mir die Item-Analyse für meine Pilotstudie. Skala: "${scale.name}" mit ${itemCount} Items. Benötigte Stichprobe: n ≥ ${minSample}.`
+                : `Explain the item analysis for my pilot study. Scale: "${scale.name}" with ${itemCount} items. Required sample: n ≥ ${minSample}.`
             )}
             className="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 transition-colors text-sm"
           >
@@ -790,7 +791,8 @@ const FullValidationPhaseContent: React.FC<FullValidationPhaseContentProps> = ({
   language,
 }) => {
   const t = TRANSLATIONS[language]
-  const minSample = Math.max(200, scale.items.length * 10)
+  const itemCount = scale.items?.length || 0
+  const minSample = Math.max(200, itemCount * 10)
 
   if (!isEnabled) {
     return (
@@ -817,7 +819,7 @@ const FullValidationPhaseContent: React.FC<FullValidationPhaseContentProps> = ({
         <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
           <h4 className="text-xs font-medium text-slate-300 mb-2">{t.recommendation}:</h4>
           <ul className="text-xs text-slate-400 space-y-1">
-            <li>• n ≥ {minSample} ({scale.items.length} Items × 10)</li>
+            <li>• n ≥ {minSample} ({itemCount} Items × 10)</li>
             <li>• CFI/TLI ≥ 0.95, RMSEA ≤ 0.06</li>
             <li>• AVE ≥ 0.50, CR ≥ 0.70</li>
           </ul>
