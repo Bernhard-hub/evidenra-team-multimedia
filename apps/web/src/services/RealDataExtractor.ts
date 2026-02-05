@@ -102,8 +102,6 @@ export class RealDataExtractor {
    * Main extraction method - replaces ALL mock data
    */
   static async extract(project: ProjectInput): Promise<RealProjectData> {
-    console.log('RealDataExtractor: Starting REAL data extraction')
-
     const documentInsights = this.extractDocumentInsights(project)
     const codingIntelligence = this.extractCodingIntelligence(project)
     const projectStatistics = this.calculateProjectStatistics(project, documentInsights)

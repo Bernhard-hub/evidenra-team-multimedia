@@ -135,10 +135,9 @@ export function useRealtime({ projectId, documentId, enabled = true }: RealtimeC
   useEffect(() => {
     if (!enabled || !projectId) return
 
-    // Check if Supabase is in demo mode
+    // Check if Supabase is configured
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
     if (!supabaseUrl) {
-      console.log('Realtime: Demo mode - skipping subscriptions')
       return
     }
 
@@ -184,9 +183,7 @@ export function useRealtime({ projectId, documentId, enabled = true }: RealtimeC
 
     // Subscribe to the channel
     channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log(`Realtime: Connected to ${channelName}`)
-      } else if (status === 'CHANNEL_ERROR') {
+      if (status === 'CHANNEL_ERROR') {
         console.error(`Realtime: Error connecting to ${channelName}`)
       }
     })

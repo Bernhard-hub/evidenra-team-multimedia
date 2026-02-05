@@ -13,10 +13,12 @@ import {
 } from '@tabler/icons-react'
 import { RESEARCH_PLANS, createCheckoutSession, calculateYearlySavings } from '@/lib/stripe'
 import { useAuthStore } from '@/stores/authStore'
+import { useSubscriptionStore } from '@/stores/subscriptionStore'
 
 export default function PricingPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { organization } = useSubscriptionStore()
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly')
   const [isLoading, setIsLoading] = useState<string | null>(null)
 
@@ -26,24 +28,28 @@ export default function PricingPage() {
       return
     }
 
+    if (!organization) {
+      // User needs to create an organization first
+      navigate('/')
+      return
+    }
+
     setIsLoading(planId)
 
     try {
       const result = await createCheckoutSession(
         planId,
         billingCycle,
-        'org-temp', // TODO: Get actual organization ID
+        organization.id,
         user.email || ''
       )
 
       if ('url' in result && result.url) {
         window.location.href = result.url
       } else {
-        console.error('Checkout error:', result.error)
         alert('Fehler beim Starten des Checkouts: ' + result.error)
       }
     } catch (err) {
-      console.error('Checkout error:', err)
       alert('Ein Fehler ist aufgetreten')
     } finally {
       setIsLoading(null)

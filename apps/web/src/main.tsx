@@ -14,6 +14,18 @@ const queryClient = new QueryClient({
   },
 })
 
+// Hide initial loader after a short delay to ensure smooth transition
+const hideInitialLoader = () => {
+  const loader = document.getElementById('initial-loader')
+  if (loader) {
+    loader.classList.add('fade-out')
+    setTimeout(() => {
+      loader.style.display = 'none'
+    }, 300)
+  }
+}
+
+// Render app
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -23,3 +35,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </React.StrictMode>,
 )
+
+// Hide loader after React has mounted
+setTimeout(hideInitialLoader, 100)

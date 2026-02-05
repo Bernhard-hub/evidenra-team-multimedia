@@ -3,16 +3,104 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="EVIDENRA Team Multimedia - Qualitative Forschung für Teams, powered by AI" />
-    <meta name="theme-color" content="#f59e0b" />
-    <title>EVIDENRA Team Multimedia</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="EVIDENRA Research - Qualitative Forschung für Teams, powered by AI" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>EVIDENRA Research</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      /* Initial loading screen - shown while JS loads */
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #0a0a0f;
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      #initial-loader.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #initial-loader .logo {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        animation: pulse 2s infinite;
+      }
+      #initial-loader .logo span {
+        color: white;
+        font-size: 32px;
+        font-weight: 700;
+        font-family: 'Inter', sans-serif;
+      }
+      #initial-loader .brand {
+        color: #fafafa;
+        font-size: 24px;
+        font-weight: 700;
+        font-family: 'Inter', sans-serif;
+        letter-spacing: -0.5px;
+        margin-bottom: 32px;
+      }
+      #initial-loader .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid rgba(99, 102, 241, 0.2);
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      /* Hide initial loader once React app is ready */
+      .app-ready #initial-loader {
+        display: none;
+      }
+    </style>
   </head>
   <body class="bg-surface-950 text-surface-100 antialiased">
+    <!-- Initial loader shown while JS loads -->
+    <div id="initial-loader">
+      <div class="logo"><span>E</span></div>
+      <div class="brand">EVIDENRA</div>
+      <div class="spinner"></div>
+    </div>
+
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Fallback error handler for uncaught errors -->
+    <script>
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        var loader = document.getElementById('initial-loader');
+        if (loader) {
+          loader.innerHTML = '<div style="text-align:center;padding:20px;color:#f87171;">' +
+            '<div style="font-size:48px;margin-bottom:16px;">⚠️</div>' +
+            '<div style="font-size:18px;font-weight:600;margin-bottom:8px;">Fehler beim Laden</div>' +
+            '<div style="font-size:14px;color:#a1a1aa;margin-bottom:16px;">Bitte laden Sie die Seite neu</div>' +
+            '<button onclick="location.reload()" style="padding:12px 24px;background:#6366f1;color:white;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;">Neu laden</button>' +
+            '</div>';
+        }
+        return false;
+      };
+    </script>
   </body>
 </html>

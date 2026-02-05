@@ -257,6 +257,7 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
         + '-' + Date.now().toString(36)
 
       // 1. Create organization
+      console.log('Creating organization:', { name, slug })
       const { data: org, error: orgError } = await db
         .from('organizations')
         .insert({
@@ -266,40 +267,48 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
         .select()
         .single()
 
-      if (orgError) throw orgError
+      if (orgError) {
+        console.error('Organization creation error:', orgError.message, orgError.details, orgError.hint, orgError.code)
+        throw orgError
+      }
       if (!org) throw new Error('Failed to create organization')
 
       // 2. Add user as owner
+      console.log('Adding user as owner:', { organization_id: org.id, user_id: userId })
       const { error: memberError } = await db
         .from('organization_members')
         .insert({
           organization_id: org.id,
           user_id: userId,
-          role: 'owner',
-          invited_by: userId,
-          joined_at: new Date().toISOString()
+          role: 'owner'
         })
 
-      if (memberError) throw memberError
+      if (memberError) {
+        console.error('Member creation error:', memberError.message, memberError.details, memberError.hint, memberError.code)
+        throw memberError
+      }
 
-      // 3. Create trial subscription (14 days)
-      const trialEnd = new Date()
-      trialEnd.setDate(trialEnd.getDate() + 14)
+      // 3. Create trial subscription (14 days) - optional, don't fail if table doesn't exist
+      try {
+        const trialEnd = new Date()
+        trialEnd.setDate(trialEnd.getDate() + 14)
 
-      const { error: subError } = await db
-        .from('organization_subscriptions')
-        .insert({
-          organization_id: org.id,
-          plan_id: 'starter',
-          status: 'trialing',
-          billing_cycle: 'monthly',
-          trial_end: trialEnd.toISOString(),
-          seats_used: 1
-        })
+        const { error: subError } = await db
+          .from('organization_subscriptions')
+          .insert({
+            organization_id: org.id,
+            plan_id: 'starter',
+            status: 'trialing',
+            billing_cycle: 'monthly',
+            trial_end: trialEnd.toISOString(),
+            seats_used: 1
+          })
 
-      if (subError) {
-        console.error('Failed to create trial subscription:', subError)
-        // Don't throw - org is created, subscription can be added later
+        if (subError) {
+          console.warn('Failed to create trial subscription (non-critical):', subError.message)
+        }
+      } catch (e) {
+        console.warn('Subscription table may not exist:', e)
       }
 
       const organization: Organization = {

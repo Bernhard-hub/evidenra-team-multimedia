@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   IconRobot,
   IconUser,
@@ -16,10 +16,28 @@ import {
   IconCode as IconCodeIcon,
   IconSearch,
   IconBook,
-  IconArrowRight
+  IconArrowRight,
+  // Questionnaire module icons
+  IconFileSearch,
+  IconBulb,
+  IconListCheck,
+  IconChecks,
+  IconClipboardList,
+  IconChartBar,
+  IconNetwork,
+  IconDownload,
+  IconForms
 } from '@tabler/icons-react'
 import { AntiHallucinationService } from '@services/AntiHallucinationService'
 import { useNexusWorkflowContext } from '@/contexts/MethodologyContext'
+import {
+  NexusQuestionnaireIntegration,
+  NexusQuestionnaireContextBuilder,
+  buildQuestionnaireSystemPrompt,
+  NEXUS_QUESTIONNAIRE_ACTIONS,
+  type NexusQuestionnaireAction,
+  type NexusQuestionnaireContext,
+} from '@services/questionnaire'
 
 interface ChatMessage {
   id: string
@@ -34,6 +52,29 @@ interface QuickAction {
   label: string
   prompt: string
   color: string
+  category?: string
+}
+
+// Icon mapping for questionnaire actions
+const QUESTIONNAIRE_ICON_MAP: Record<string, React.ReactNode> = {
+  'IconSearch': <IconSearch size={16} />,
+  'IconFileSearch': <IconFileSearch size={16} />,
+  'IconBulb': <IconBulb size={16} />,
+  'IconListCheck': <IconListCheck size={16} />,
+  'IconChecks': <IconChecks size={16} />,
+  'IconClipboardList': <IconClipboardList size={16} />,
+  'IconChartBar': <IconChartBar size={16} />,
+  'IconNetwork': <IconNetwork size={16} />,
+  'IconDownload': <IconDownload size={16} />,
+  'IconFileText': <IconFileText size={16} />,
+}
+
+// Color mapping for questionnaire action categories
+const QUESTIONNAIRE_CATEGORY_COLORS: Record<string, string> = {
+  'search': 'from-blue-500 to-cyan-500',
+  'generate': 'from-purple-500 to-pink-500',
+  'validate': 'from-green-500 to-emerald-500',
+  'export': 'from-amber-500 to-orange-500',
 }
 
 interface ResearchContext {
@@ -71,6 +112,48 @@ export const NexusAIChat: React.FC<NexusAIChatProps> = ({
   // Workflow context integration
   const { hasWorkflowContext, currentStep, buildNexusPrompt, getWorkflowContext } = useNexusWorkflowContext()
 
+  // Questionnaire context detection
+  const [questionnaireContextActive, setQuestionnaireContextActive] = useState(false)
+  const [showQuestionnaireActions, setShowQuestionnaireActions] = useState(false)
+
+  // Build questionnaire context from project data
+  const questionnaireContext = useMemo<NexusQuestionnaireContext>(() => {
+    return NexusQuestionnaireContextBuilder.build(
+      context.codes.map(c => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+      })),
+      context.codings.map(c => ({
+        id: c.id,
+        codeId: c.code_id,
+        text: c.selected_text || '',
+        codeName: context.codes.find(code => code.id === c.code_id)?.name,
+      }))
+    )
+  }, [context.codes, context.codings])
+
+  // Detect questionnaire context from user messages
+  const detectQuestionnaireContext = useCallback((message: string) => {
+    const isQuestionnaire = NexusQuestionnaireContextBuilder.shouldActivateQuestionnaireContext(message)
+    if (isQuestionnaire && !questionnaireContextActive) {
+      setQuestionnaireContextActive(true)
+      setShowQuestionnaireActions(true)
+    }
+  }, [questionnaireContextActive])
+
+  // Get contextual questionnaire quick actions
+  const questionnaireQuickActions = useMemo<QuickAction[]>(() => {
+    const actions = NexusQuestionnaireIntegration.getContextualActions(questionnaireContext, language)
+    return actions.slice(0, 4).map(action => ({
+      icon: QUESTIONNAIRE_ICON_MAP[action.icon] || <IconForms size={16} />,
+      label: action.label[language],
+      prompt: action.prompt[language],
+      color: QUESTIONNAIRE_CATEGORY_COLORS[action.category] || 'from-purple-500 to-pink-500',
+      category: action.category,
+    }))
+  }, [questionnaireContext, language])
+
   const t = language === 'de' ? {
     title: 'NEXUS AI',
     subtitle: 'Forschungsassistent',
@@ -87,6 +170,9 @@ export const NexusAIChat: React.FC<NexusAIChatProps> = ({
     suggestCodes: 'Codes vorschlagen',
     analyzePatterns: 'Muster analysieren',
     qualityCheck: 'Qualitätsprüfung',
+    // Questionnaire
+    questionnaireMode: 'Fragebogen-Modus',
+    questionnaireActions: 'Fragebogenentwicklung',
     welcome: `# Willkommen bei NEXUS AI
 
 Ich bin dein **Forschungsassistent** für qualitative Analysen.
@@ -96,6 +182,7 @@ Ich bin dein **Forschungsassistent** für qualitative Analysen.
 - **Codes vorschlagen** basierend auf deinen Daten
 - **Muster analysieren** in deinen Kodierungen
 - **Qualität prüfen** deiner Analyse
+- **Fragebögen entwickeln** aus qualitativen Daten
 
 Nutze die Schnellaktionen unten oder stelle mir eine Frage!`
   } : {
@@ -114,6 +201,9 @@ Nutze die Schnellaktionen unten oder stelle mir eine Frage!`
     suggestCodes: 'Suggest codes',
     analyzePatterns: 'Analyze patterns',
     qualityCheck: 'Quality check',
+    // Questionnaire
+    questionnaireMode: 'Questionnaire mode',
+    questionnaireActions: 'Questionnaire Development',
     welcome: `# Welcome to NEXUS AI
 
 I'm your **research assistant** for qualitative analysis.
@@ -123,6 +213,7 @@ I'm your **research assistant** for qualitative analysis.
 - **Suggest codes** based on your data
 - **Analyze patterns** in your codings
 - **Check quality** of your analysis
+- **Develop questionnaires** from qualitative data
 
 Use the quick actions below or ask me a question!`
   }
@@ -138,7 +229,8 @@ Use the quick actions below or ask me a question!`
     color: 'from-indigo-500 to-purple-500'
   } : null
 
-  const quickActions: QuickAction[] = [
+  // Standard qualitative analysis quick actions
+  const baseQuickActions: QuickAction[] = [
     // Show workflow-specific action first if available
     ...(workflowQuickAction ? [workflowQuickAction] : []),
     {
@@ -174,6 +266,11 @@ Use the quick actions below or ask me a question!`
       color: 'from-amber-500 to-orange-500'
     }
   ]
+
+  // Combine quick actions: show questionnaire actions when context is active
+  const quickActions: QuickAction[] = questionnaireContextActive
+    ? [...questionnaireQuickActions, ...baseQuickActions.slice(0, 2)]
+    : baseQuickActions
 
   // Auto-scroll
   useEffect(() => {
@@ -253,6 +350,9 @@ Use the quick actions below or ask me a question!`
       return
     }
 
+    // Detect questionnaire context from message
+    detectQuestionnaireContext(messageText)
+
     // Add user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -264,6 +364,7 @@ Use the quick actions below or ask me a question!`
     setInput('')
     setIsLoading(true)
     setShowQuickActions(false)
+    setShowQuestionnaireActions(false)
 
     // Create streaming message
     const streamingMessageId = (Date.now() + 1).toString()
@@ -300,18 +401,25 @@ Der Nutzer arbeitet aktiv an diesem Workflow-Schritt. Gib kontextbezogene, prakt
 [/AKTIVER WORKFLOW]
 ` : ''
 
-      const systemPrompt = `Du bist NEXUS AI, ein wissenschaftlicher Forschungsassistent für qualitative Analysen.
+      // Build questionnaire system prompt extension if context is active
+      const questionnairePromptExtension = questionnaireContextActive || NexusQuestionnaireContextBuilder.shouldActivateQuestionnaireContext(messageText)
+        ? buildQuestionnaireSystemPrompt(questionnaireContext, language)
+        : ''
+
+      const systemPrompt = `Du bist NEXUS AI, ein wissenschaftlicher Forschungsassistent für qualitative Analysen${questionnaireContextActive ? ' und Fragebogenentwicklung' : ''}.
 
 ${AntiHallucinationService.generateSystemPromptAddition(language)}
 
 ${researchContext}
 ${workflowContextStr}
+${questionnairePromptExtension}
 Antworte immer:
 - Basierend auf den echten Projektdaten
 - In ${language === 'de' ? 'Deutsch' : 'English'}
 - Strukturiert mit Markdown
 - Hilfreich und wissenschaftlich fundiert
-${hasWorkflowContext ? '- Beziehe dich auf den aktuellen Workflow-Schritt und gib spezifische Hilfe' : ''}`
+${hasWorkflowContext ? '- Beziehe dich auf den aktuellen Workflow-Schritt und gib spezifische Hilfe' : ''}
+${questionnaireContextActive ? '- Bei Fragebogen-Themen: Nutze dein Wissen über Psychometrie, Skalenvalidierung und Item-Entwicklung' : ''}`
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -414,6 +522,8 @@ ${hasWorkflowContext ? '- Beziehe dich auf den aktuellen Workflow-Schritt und gi
       timestamp: new Date()
     }])
     setShowQuickActions(true)
+    setQuestionnaireContextActive(false)
+    setShowQuestionnaireActions(false)
   }
 
   const cancelStreaming = () => {
@@ -459,6 +569,20 @@ ${hasWorkflowContext ? '- Beziehe dich auf den aktuellen Workflow-Schritt und gi
               </span>
             </div>
           )}
+          {/* Questionnaire context indicator */}
+          {questionnaireContextActive && (
+            <button
+              onClick={() => setQuestionnaireContextActive(false)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 hover:bg-purple-500/30 transition-colors"
+              title={language === 'de' ? 'Fragebogen-Modus deaktivieren' : 'Deactivate questionnaire mode'}
+            >
+              <IconForms size={12} className="text-purple-400" />
+              <span className="text-xs text-purple-300">
+                {language === 'de' ? 'Fragebogen' : 'Questionnaire'}
+              </span>
+              <IconX size={10} className="text-purple-400" />
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -484,8 +608,26 @@ ${hasWorkflowContext ? '- Beziehe dich auf den aktuellen Workflow-Schritt und gi
       >
         {/* Quick Actions */}
         {showQuickActions && messages.length <= 1 && (
-          <div className="space-y-2">
-            <p className="text-xs text-slate-500 uppercase tracking-wider">{t.quickActions}</p>
+          <div className="space-y-3">
+            {/* Questionnaire mode toggle if not active */}
+            {!questionnaireContextActive && context.codes.length > 0 && (
+              <button
+                onClick={() => {
+                  setQuestionnaireContextActive(true)
+                  setShowQuestionnaireActions(true)
+                }}
+                className="w-full p-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs flex items-center justify-center gap-2 hover:bg-purple-500/20 transition-colors"
+              >
+                <IconForms size={14} />
+                <span>{language === 'de' ? 'Fragebogen-Modus aktivieren' : 'Activate questionnaire mode'}</span>
+              </button>
+            )}
+
+            {/* Section header */}
+            <p className="text-xs text-slate-500 uppercase tracking-wider">
+              {questionnaireContextActive ? t.questionnaireActions : t.quickActions}
+            </p>
+
             <div className="grid grid-cols-2 gap-2">
               {quickActions.map((action, i) => (
                 <button
@@ -631,13 +773,23 @@ ${hasWorkflowContext ? '- Beziehe dich auf den aktuellen Workflow-Schritt und gi
               {context.codings.length}
             </span>
           </div>
-          {/* Workflow context active indicator */}
-          {hasWorkflowContext && (
-            <div className="flex items-center gap-1 text-xs text-indigo-400">
-              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-              <span>{language === 'de' ? 'Workflow-Kontext aktiv' : 'Workflow context active'}</span>
-            </div>
-          )}
+          {/* Context indicators */}
+          <div className="flex items-center gap-2">
+            {/* Workflow context active indicator */}
+            {hasWorkflowContext && (
+              <div className="flex items-center gap-1 text-xs text-indigo-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                <span>{language === 'de' ? 'Workflow' : 'Workflow'}</span>
+              </div>
+            )}
+            {/* Questionnaire context active indicator */}
+            {questionnaireContextActive && (
+              <div className="flex items-center gap-1 text-xs text-purple-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                <span>{language === 'de' ? 'Fragebogen' : 'Questionnaire'}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

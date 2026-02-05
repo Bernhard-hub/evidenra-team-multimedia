@@ -256,6 +256,8 @@ export const projectsApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { data: null, error: new Error('Not authenticated') }
 
+    console.log('Creating project:', { organizationId: data.organizationId, name: data.name })
+
     // Note: created_by is set by database trigger if column exists
     const { data: project, error } = await supabase
       .from('projects')
@@ -266,6 +268,10 @@ export const projectsApi = {
       })
       .select()
       .single()
+
+    if (error) {
+      console.error('Project creation error:', error.message, error.details, error.hint, error.code)
+    }
 
     return { data: project, error }
   },

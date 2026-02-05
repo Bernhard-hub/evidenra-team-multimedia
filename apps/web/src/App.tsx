@@ -15,6 +15,8 @@ const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
 const TeamPage = lazy(() => import('@/pages/TeamPage'))
 const PricingPage = lazy(() => import('@/pages/PricingPage'))
 const SuccessPage = lazy(() => import('@/pages/SuccessPage'))
+const AcceptInvitePage = lazy(() => import('@/pages/AcceptInvitePage'))
+const QuestionnairePage = lazy(() => import('@/pages/QuestionnairePage'))
 
 // Loading spinner
 const LoadingSpinner = () => (
@@ -195,6 +197,7 @@ function App() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/success" element={<SuccessPage />} />
+          <Route path="/invite/:token" element={<AcceptInvitePage />} />
 
           {/* Protected routes */}
           <Route
@@ -234,6 +237,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/questionnaire"
+            element={
+              <ProtectedRoute>
+                <QuestionnairePage />
               </ProtectedRoute>
             }
           />

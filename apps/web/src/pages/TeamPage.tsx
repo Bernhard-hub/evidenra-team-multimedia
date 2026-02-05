@@ -3,6 +3,7 @@ import Layout from '@/components/Layout'
 import { useSubscriptionStore } from '@/stores/subscriptionStore'
 import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase'
+import { invitationsApi } from '@/lib/api'
 
 interface TeamMember {
   id: string
@@ -20,8 +21,10 @@ interface Invitation {
   id: string
   email: string
   role: 'admin' | 'editor' | 'viewer'
-  createdAt: string
-  expiresAt: string
+  token: string
+  created_at: string
+  expires_at: string
+  status: string
 }
 
 export default function TeamPage() {
@@ -34,11 +37,11 @@ export default function TeamPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  // Fetch team members
+  // Fetch team members and invitations
   useEffect(() => {
     if (!organization) return
 
-    const fetchMembers = async () => {
+    const fetchData = async () => {
       setIsLoading(true)
       try {
         // Fetch members with user data
@@ -74,7 +77,6 @@ export default function TeamPage() {
 
         // If we couldn't get user data via admin API, try to at least show current user
         if (membersWithUsers.length === 0 && user) {
-          // Just show the current user as the member
           const { data: memberData } = await (supabase as any)
             .from('organization_members')
             .select('*')
@@ -116,15 +118,19 @@ export default function TeamPage() {
         }
 
         setMembers(membersWithUsers)
+
+        // Fetch pending invitations
+        const { data: invitationsData } = await invitationsApi.getByOrganization(organization.id)
+        setInvitations(invitationsData || [])
       } catch (err) {
-        console.error('Error fetching members:', err)
+        console.error('Error fetching data:', err)
         setError('Fehler beim Laden der Teammitglieder')
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchMembers()
+    fetchData()
   }, [organization, user])
 
   const roleLabels: Record<string, string> = {
@@ -145,21 +151,99 @@ export default function TeamPage() {
     if (!organization || !user) return
 
     try {
-      // For now, just add them directly to the organization
-      // In a real app, you'd send an email invitation
+      setError(null)
 
-      // Check if user exists
-      // Note: This requires the user to already be registered
-      // A proper implementation would use Supabase's invite functionality
+      const { data: invitation, error: inviteError } = await invitationsApi.create({
+        organizationId: organization.id,
+        email,
+        role,
+        inviterName: user.user_metadata?.full_name || user.email,
+      })
 
-      setSuccess(`Einladung an ${email} gesendet (Demo-Modus: Benutzer muss sich selbst registrieren)`)
-      setShowInviteModal(false)
+      if (inviteError) {
+        throw inviteError
+      }
 
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccess(null), 5000)
-    } catch (err) {
+      if (invitation) {
+        // Add to local state
+        setInvitations(prev => [invitation as Invitation, ...prev])
+
+        // Generate invite URL
+        const inviteUrl = `${window.location.origin}/invite/${invitation.token}`
+
+        setSuccess(
+          `Einladung erstellt! Der Einladungslink wurde generiert. ` +
+          `Teilen Sie diesen Link mit ${email}: ${inviteUrl}`
+        )
+        setShowInviteModal(false)
+
+        // Copy to clipboard
+        try {
+          await navigator.clipboard.writeText(inviteUrl)
+          setSuccess(prev => prev + ' (Link wurde in die Zwischenablage kopiert)')
+        } catch {
+          // Clipboard might not be available
+        }
+      }
+
+      // Clear success message after 10 seconds
+      setTimeout(() => setSuccess(null), 10000)
+    } catch (err: any) {
       console.error('Error inviting member:', err)
-      setError('Fehler beim Einladen')
+      setError(err?.message || 'Fehler beim Erstellen der Einladung')
+    }
+  }
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    try {
+      const { error } = await invitationsApi.cancel(invitationId)
+      if (error) throw error
+
+      setInvitations(prev => prev.filter(inv => inv.id !== invitationId))
+      setSuccess('Einladung wurde storniert')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err: any) {
+      console.error('Error canceling invitation:', err)
+      setError(err?.message || 'Fehler beim Stornieren der Einladung')
+    }
+  }
+
+  const handleResendInvitation = async (invitation: Invitation) => {
+    try {
+      const { data, error } = await invitationsApi.resend(invitation.id)
+      if (error) throw error
+
+      // Update local state
+      if (data) {
+        setInvitations(prev => prev.map(inv => inv.id === invitation.id ? { ...inv, ...data } : inv))
+      }
+
+      const inviteUrl = `${window.location.origin}/invite/${invitation.token}`
+      setSuccess(`Einladung erneut gesendet! Link: ${inviteUrl}`)
+
+      // Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(inviteUrl)
+        setSuccess(prev => prev + ' (Link wurde in die Zwischenablage kopiert)')
+      } catch {
+        // Clipboard might not be available
+      }
+
+      setTimeout(() => setSuccess(null), 10000)
+    } catch (err: any) {
+      console.error('Error resending invitation:', err)
+      setError(err?.message || 'Fehler beim erneuten Senden')
+    }
+  }
+
+  const copyInviteLink = async (token: string) => {
+    const inviteUrl = `${window.location.origin}/invite/${token}`
+    try {
+      await navigator.clipboard.writeText(inviteUrl)
+      setSuccess('Einladungslink in die Zwischenablage kopiert!')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch {
+      setError('Konnte Link nicht kopieren')
     }
   }
 
@@ -195,13 +279,18 @@ export default function TeamPage() {
 
         {/* Success/Error Messages */}
         {success && (
-          <div className="mb-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400">
+          <div className="mb-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
             {success}
           </div>
         )}
         {error && (
-          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-            {error}
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-300 hover:text-red-200">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         )}
 
@@ -280,6 +369,65 @@ export default function TeamPage() {
           )}
         </div>
 
+        {/* Pending Invitations */}
+        {invitations.length > 0 && (
+          <div className="bg-surface-900 rounded-xl border border-surface-800">
+            <div className="p-4 border-b border-surface-800">
+              <h2 className="text-lg font-semibold text-surface-100">Ausstehende Einladungen</h2>
+            </div>
+            <div className="divide-y divide-surface-800">
+              {invitations.map((invitation) => (
+                <div key={invitation.id} className="flex items-center gap-4 p-4 hover:bg-surface-800/50 transition-colors">
+                  <div className="w-12 h-12 rounded-full bg-surface-700 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-surface-100">{invitation.email}</p>
+                    <p className="text-sm text-surface-500">
+                      Eingeladen am {new Date(invitation.created_at).toLocaleDateString('de-DE')} ·
+                      Läuft ab am {new Date(invitation.expires_at).toLocaleDateString('de-DE')}
+                    </p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[invitation.role]}`}>
+                    {roleLabels[invitation.role]}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => copyInviteLink(invitation.token)}
+                      className="p-2 rounded-lg hover:bg-surface-700 text-surface-400 hover:text-surface-200 transition-colors"
+                      title="Link kopieren"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleResendInvitation(invitation)}
+                      className="p-2 rounded-lg hover:bg-surface-700 text-surface-400 hover:text-surface-200 transition-colors"
+                      title="Erneut senden"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleCancelInvitation(invitation.id)}
+                      className="p-2 rounded-lg hover:bg-red-500/10 text-surface-400 hover:text-red-400 transition-colors"
+                      title="Einladung stornieren"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Invite Modal */}
         {showInviteModal && (
           <InviteModal
@@ -344,7 +492,7 @@ function InviteModal({
           </div>
 
           <div className="p-3 rounded-lg bg-surface-800 text-sm text-surface-400">
-            <strong>Hinweis:</strong> Das eingeladene Mitglied erhält eine E-Mail mit einem Einladungslink.
+            <strong>Hinweis:</strong> Das eingeladene Mitglied erhält einen Einladungslink, den Sie per E-Mail teilen können.
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -364,7 +512,7 @@ function InviteModal({
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Wird gesendet...
+                  Wird erstellt...
                 </>
               ) : (
                 'Einladen'

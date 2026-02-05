@@ -137,11 +137,11 @@ export function usePresence({ projectId, documentId, enabled = true }: PresenceC
 
         setOnlineUsers(users)
       })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('User joined:', key, newPresences)
+      .on('presence', { event: 'join' }, () => {
+        // User joined - presence state is already tracked via sync
       })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('User left:', key, leftPresences)
+      .on('presence', { event: 'leave' }, () => {
+        // User left - presence state is already tracked via sync
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
