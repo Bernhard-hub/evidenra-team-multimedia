@@ -80,34 +80,72 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Auth callback handler for OAuth
 const AuthCallback = () => {
-  const { initialize, user, isInitialized } = useAuthStore()
   const [error, setError] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(true)
 
   useEffect(() => {
-    // Re-initialize to pick up the new session from OAuth callback
-    initialize()
-  }, [initialize])
-
-  // Redirect to dashboard once authenticated
-  useEffect(() => {
-    if (isInitialized) {
-      if (user) {
-        // Successfully authenticated - redirect to dashboard
-        window.location.href = '/'
-      } else {
-        // Check for error in URL
+    const handleCallback = async () => {
+      try {
+        // Check for error in URL first
         const params = new URLSearchParams(window.location.search)
-        const errorParam = params.get('error')
-        const errorDescription = params.get('error_description')
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+
+        const errorParam = params.get('error') || hashParams.get('error')
+        const errorDescription = params.get('error_description') || hashParams.get('error_description')
+
         if (errorParam) {
           setError(errorDescription || errorParam)
-        } else {
-          // No user and no error - redirect to login
-          window.location.href = '/login'
+          setIsProcessing(false)
+          return
         }
+
+        // Import supabase directly to handle the callback
+        const { supabase } = await import('@/lib/supabase')
+
+        // Supabase should automatically detect and process the tokens from URL
+        // Wait a moment for Supabase to process
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Check if we have a session now
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          setError(sessionError.message)
+          setIsProcessing(false)
+          return
+        }
+
+        if (session) {
+          // Success! Redirect to dashboard
+          window.location.href = '/'
+        } else {
+          // No session - try to exchange code if present
+          const code = params.get('code')
+          if (code) {
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+            if (exchangeError) {
+              console.error('Code exchange error:', exchangeError)
+              setError(exchangeError.message)
+              setIsProcessing(false)
+              return
+            }
+            // Success after code exchange
+            window.location.href = '/'
+          } else {
+            // No session and no code - redirect to login
+            window.location.href = '/login'
+          }
+        }
+      } catch (err) {
+        console.error('Callback error:', err)
+        setError(err instanceof Error ? err.message : 'Authentication failed')
+        setIsProcessing(false)
       }
     }
-  }, [isInitialized, user])
+
+    handleCallback()
+  }, [])
 
   if (error) {
     return (
@@ -126,6 +164,10 @@ const AuthCallback = () => {
         </div>
       </div>
     )
+  }
+
+  if (isProcessing) {
+    return <LoadingSpinner />
   }
 
   return <LoadingSpinner />
