@@ -66,6 +66,7 @@ export interface SubscriptionState {
 
   // Actions
   initialize: (userId: string) => Promise<void>
+  reinitialize: (userId: string) => Promise<void>
   createOrganization: (name: string, userId: string) => Promise<Organization | null>
   refreshSubscription: () => Promise<void>
   checkLimit: (type: 'projects' | 'documents' | 'seats', currentCount: number) => { allowed: boolean; limit: number | null; message?: string }
@@ -229,6 +230,21 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
     }
   },
 
+  reinitialize: async (userId: string) => {
+    // Reset state and re-initialize (used after joining a new organization)
+    set({
+      organization: null,
+      subscription: null,
+      planLimits: null,
+      memberRole: null,
+      isLoading: false,
+      isInitialized: false,
+      error: null
+    })
+    // Call initialize which will now run since isInitialized is false
+    await get().initialize(userId)
+  },
+
   createOrganization: async (name: string, userId: string) => {
     set({ isLoading: true, error: null })
 
@@ -245,8 +261,7 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
         .from('organizations')
         .insert({
           name,
-          slug,
-          created_by: userId
+          slug
         })
         .select()
         .single()
