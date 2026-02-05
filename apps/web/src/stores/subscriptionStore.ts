@@ -289,10 +289,10 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
       }
 
       // 3. Create trial subscription (14 days) - optional, don't fail if table doesn't exist
-      try {
-        const trialEnd = new Date()
-        trialEnd.setDate(trialEnd.getDate() + 14)
+      const trialEnd = new Date()
+      trialEnd.setDate(trialEnd.getDate() + 14)
 
+      try {
         const { error: subError } = await db
           .from('organization_subscriptions')
           .insert({
