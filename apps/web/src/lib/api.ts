@@ -256,13 +256,13 @@ export const projectsApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { data: null, error: new Error('Not authenticated') }
 
+    // Note: created_by is set by database trigger if column exists
     const { data: project, error } = await supabase
       .from('projects')
       .insert({
         organization_id: data.organizationId,
         name: data.name,
         description: data.description,
-        created_by: user.id,
       })
       .select()
       .single()
@@ -720,6 +720,191 @@ export const codingsApi = {
         coded_by: user.id,
       })))
       .select()
+
+    return { data, error }
+  },
+}
+
+// ============================================
+// PROFILES API
+// ============================================
+
+// ============================================
+// INVITATIONS API
+// ============================================
+
+export const invitationsApi = {
+  async getByOrganization(organizationId: string) {
+    if (isDemoMode) {
+      return { data: [], error: null }
+    }
+
+    const { data, error } = await supabase
+      .from('team_invitations')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
+    return { data, error }
+  },
+
+  async create(data: {
+    organizationId: string
+    email: string
+    role: 'admin' | 'editor' | 'viewer'
+    inviterName?: string
+  }) {
+    if (isDemoMode) {
+      return {
+        data: {
+          id: `invite-${Date.now()}`,
+          organization_id: data.organizationId,
+          email: data.email,
+          role: data.role,
+          token: crypto.randomUUID(),
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        error: null,
+      }
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { data: null, error: new Error('Not authenticated') }
+
+    const { data: invitation, error } = await supabase
+      .from('team_invitations')
+      .insert({
+        organization_id: data.organizationId,
+        email: data.email,
+        role: data.role,
+        invited_by: user.id,
+        inviter_name: data.inviterName || user.user_metadata?.full_name || user.email,
+      })
+      .select()
+      .single()
+
+    return { data: invitation, error }
+  },
+
+  async getByToken(token: string) {
+    if (isDemoMode) {
+      return { data: null, error: new Error('Demo mode') }
+    }
+
+    const { data, error } = await supabase
+      .from('team_invitations')
+      .select(`
+        *,
+        organization:organizations(id, name, slug)
+      `)
+      .eq('token', token)
+      .eq('status', 'pending')
+      .single()
+
+    if (data && new Date(data.expires_at) < new Date()) {
+      // Mark as expired
+      await supabase
+        .from('team_invitations')
+        .update({ status: 'expired' })
+        .eq('id', data.id)
+      return { data: null, error: new Error('Invitation has expired') }
+    }
+
+    return { data, error }
+  },
+
+  async accept(token: string) {
+    if (isDemoMode) {
+      return { data: null, error: new Error('Demo mode') }
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { data: null, error: new Error('Not authenticated') }
+
+    // Get invitation
+    const { data: invitation, error: fetchError } = await supabase
+      .from('team_invitations')
+      .select('*')
+      .eq('token', token)
+      .eq('status', 'pending')
+      .single()
+
+    if (fetchError || !invitation) {
+      return { data: null, error: fetchError || new Error('Invitation not found') }
+    }
+
+    // Check if expired
+    if (new Date(invitation.expires_at) < new Date()) {
+      await supabase
+        .from('team_invitations')
+        .update({ status: 'expired' })
+        .eq('id', invitation.id)
+      return { data: null, error: new Error('Invitation has expired') }
+    }
+
+    // Add user as member
+    const { error: memberError } = await supabase
+      .from('organization_members')
+      .insert({
+        organization_id: invitation.organization_id,
+        user_id: user.id,
+        role: invitation.role,
+        invited_by: invitation.invited_by,
+      })
+
+    if (memberError) {
+      // Check if already a member
+      if (memberError.code === '23505') {
+        return { data: null, error: new Error('You are already a member of this organization') }
+      }
+      return { data: null, error: memberError }
+    }
+
+    // Mark invitation as accepted
+    const { data, error } = await supabase
+      .from('team_invitations')
+      .update({
+        status: 'accepted',
+        accepted_at: new Date().toISOString(),
+      })
+      .eq('id', invitation.id)
+      .select()
+      .single()
+
+    return { data, error }
+  },
+
+  async cancel(invitationId: string) {
+    if (isDemoMode) {
+      return { error: null }
+    }
+
+    const { error } = await supabase
+      .from('team_invitations')
+      .update({ status: 'canceled' })
+      .eq('id', invitationId)
+
+    return { error }
+  },
+
+  async resend(invitationId: string) {
+    if (isDemoMode) {
+      return { data: null, error: null }
+    }
+
+    // Just update created_at and expires_at to "resend"
+    const { data, error } = await supabase
+      .from('team_invitations')
+      .update({
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+      .eq('id', invitationId)
+      .select()
+      .single()
 
     return { data, error }
   },
