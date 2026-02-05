@@ -184,7 +184,7 @@ export const ScaleBrowser: React.FC<ScaleBrowserProps> = ({
     switch (sortBy) {
       case 'reliability':
         results.sort((a, b) =>
-          (b.psychometrics.cronbachAlpha || 0) - (a.psychometrics.cronbachAlpha || 0)
+          (b.psychometrics?.cronbachAlpha || 0) - (a.psychometrics?.cronbachAlpha || 0)
         )
         break
       case 'items':
@@ -487,13 +487,13 @@ const ScaleListItem: React.FC<ScaleListItemProps> = ({
 
           {/* Reliability */}
           <span className={`px-2 py-1 rounded text-xs ${
-            scale.psychometrics.cronbachAlpha >= 0.80
+            (scale.psychometrics?.cronbachAlpha || 0) >= 0.80
               ? 'bg-green-500/20 text-green-400'
-              : scale.psychometrics.cronbachAlpha >= 0.70
+              : (scale.psychometrics?.cronbachAlpha || 0) >= 0.70
               ? 'bg-amber-500/20 text-amber-400'
               : 'bg-red-500/20 text-red-400'
           }`}>
-            α = {scale.psychometrics.cronbachAlpha?.toFixed(2)}
+            α = {scale.psychometrics?.cronbachAlpha?.toFixed(2) || 'N/A'}
           </span>
 
           {/* Favorite */}
@@ -539,13 +539,13 @@ const ScaleListItem: React.FC<ScaleListItemProps> = ({
             <div className="p-2 rounded bg-slate-800/50">
               <span className="text-xs text-slate-500">{t.cronbachAlpha}</span>
               <p className="text-lg font-bold text-white">
-                {scale.psychometrics.cronbachAlpha?.toFixed(2)}
+                {scale.psychometrics?.cronbachAlpha?.toFixed(2) || 'N/A'}
               </p>
             </div>
             <div className="p-2 rounded bg-slate-800/50">
               <span className="text-xs text-slate-500">{t.validationSample}</span>
               <p className="text-lg font-bold text-white">
-                n = {scale.psychometrics.validationSampleSize}
+                n = {scale.psychometrics?.validationSampleSize || 'N/A'}
               </p>
             </div>
             <div className="p-2 rounded bg-slate-800/50">
@@ -668,11 +668,11 @@ const ScaleGridItem: React.FC<ScaleGridItemProps> = ({
           {scale.items?.length || 0} items
         </span>
         <span className={`px-2 py-0.5 rounded text-xs ${
-          scale.psychometrics.cronbachAlpha >= 0.80
+          (scale.psychometrics?.cronbachAlpha || 0) >= 0.80
             ? 'bg-green-500/20 text-green-400'
             : 'bg-amber-500/20 text-amber-400'
         }`}>
-          α = {scale.psychometrics.cronbachAlpha?.toFixed(2)}
+          α = {scale.psychometrics?.cronbachAlpha?.toFixed(2) || 'N/A'}
         </span>
       </div>
     </button>

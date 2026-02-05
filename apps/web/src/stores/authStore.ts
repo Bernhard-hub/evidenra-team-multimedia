@@ -213,6 +213,25 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         return { success: false, error: error.message }
       }
 
+      // Ensure profile exists (in case trigger didn't fire)
+      if (data.user) {
+        try {
+          await supabase.rpc('ensure_profile_exists')
+        } catch (e) {
+          // Fallback: Try direct upsert (needs RLS policy)
+          try {
+            await supabase.from('profiles').upsert({
+              id: data.user.id,
+              email: data.user.email || email,
+              full_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || email.split('@')[0],
+            }, { onConflict: 'id' })
+          } catch {
+            // Profile creation failed - will show error when trying to create project
+            console.warn('Could not ensure profile exists')
+          }
+        }
+      }
+
       set({
         user: data.user,
         session: data.session,
