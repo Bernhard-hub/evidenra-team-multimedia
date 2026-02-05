@@ -195,8 +195,8 @@ max_frequency = "5s"
 # Google OAuth
 [auth.external.google]
 enabled = true
-client_id = "1087774708610-27o8tc4a68mrr7pfpigk02qrm3bsp1ib.apps.googleusercontent.com"
-secret = "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"
+client_id = "env(GOOGLE_OAUTH_CLIENT_ID)"
+secret = "env(GOOGLE_OAUTH_SECRET)"
 redirect_uri = ""
 url = ""
 skip_nonce_check = false
@@ -205,8 +205,8 @@ email_optional = false
 # GitHub OAuth
 [auth.external.github]
 enabled = true
-client_id = "Ov23ctgqheOjtx3Pgao5"
-secret = "17423fba938fa56e4903bfd16725b765fa20677e"
+client_id = "env(GITHUB_OAUTH_CLIENT_ID)"
+secret = "env(GITHUB_OAUTH_SECRET)"
 redirect_uri = ""
 url = ""
 skip_nonce_check = false
