@@ -1,121 +1,13 @@
 <!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Magic Link - EVIDENRA</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-  </style>
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #e4e4e7;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0a0a0f; min-height: 100vh;">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px;">
-
-          <!-- Logo & Header -->
-          <tr>
-            <td align="center" style="padding-bottom: 32px;">
-              <div style="display: inline-flex; align-items: center; gap: 12px;">
-                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
-                <span style="font-size: 28px; font-weight: 700; color: #fafafa; letter-spacing: -0.5px;">EVIDENRA</span>
-              </div>
-            </td>
-          </tr>
-
-          <!-- Main Card -->
-          <tr>
-            <td>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(180deg, #18181b 0%, #141417 100%); border-radius: 24px; border: 1px solid #27272a; overflow: hidden;">
-
-                <!-- Gradient Accent Line -->
-                <tr>
-                  <td style="height: 4px; background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 50%, #6366f1 100%);"></td>
-                </tr>
-
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 48px 40px;">
-
-                    <!-- Icon -->
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td align="center" style="padding-bottom: 24px;">
-                          <div style="width: 72px; height: 72px; background: rgba(236, 72, 153, 0.1); border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(236, 72, 153, 0.2);">
-                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M15 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H15" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                              <path d="M10 17L15 12L10 7" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                              <path d="M15 12H3" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- Heading -->
-                    <h1 style="margin: 0 0 16px 0; font-size: 26px; font-weight: 700; color: #fafafa; text-align: center; letter-spacing: -0.5px;">
-                      Ihr Magic Link ist da!
-                    </h1>
-
-                    <!-- Subheading -->
-                    <p style="margin: 0 0 32px 0; font-size: 16px; line-height: 1.6; color: #a1a1aa; text-align: center;">
-                      Klicken Sie auf den Button unten, um sich sofort und sicher bei EVIDENRA anzumelden – kein Passwort erforderlich.
-                    </p>
-
-                    <!-- CTA Button -->
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td align="center" style="padding-bottom: 32px;">
-                          <a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 12px; box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);">
-                            Jetzt anmelden
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- Timer Notice -->
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td align="center">
-                          <div style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: rgba(99, 102, 241, 0.1); border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <circle cx="12" cy="12" r="10" stroke="#6366f1" stroke-width="2"/>
-                              <path d="M12 6V12L16 14" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
-                            <span style="font-size: 13px; color: #a1a1aa;">Dieser Link ist 1 Stunde gültig</span>
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
-
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 32px 20px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 13px; color: #52525b;">
-                Falls Sie diese Anmeldung nicht angefordert haben, können Sie diese E-Mail ignorieren.
-              </p>
-              <p style="margin: 0; font-size: 12px; color: #3f3f46;">
-                © 2025 EVIDENRA · Qualitative Forschung neu gedacht
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#0f0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f0f14;padding:40px 20px;"><tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:500px;background:linear-gradient(135deg,#1a1a24,#12121a);border-radius:16px;border:1px solid rgba(139,92,246,0.2);">
+<tr><td style="padding:40px;text-align:center;">
+<div style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#7c3aed);padding:12px 16px;border-radius:12px;margin-bottom:20px;"><span style="color:white;font-size:24px;font-weight:bold;">EVIDENRA</span></div>
+<h1 style="color:#fff;font-size:24px;margin:0 0 8px;">Dein Login-Link</h1>
+<p style="color:#e4e4e7;font-size:16px;line-height:1.6;margin:20px 0;">Klicke auf den Button um dich anzumelden. Gültig für 24 Stunden.</p>
+<a href="{{ .ConfirmationURL }}" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:600;">Jetzt anmelden</a>
+</td></tr></table></td></tr></table>
+</body></html>

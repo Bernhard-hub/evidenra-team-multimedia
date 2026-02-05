@@ -23,6 +23,41 @@ export interface AuthState {
 // Check if we're in demo mode (no Supabase credentials)
 const isDemoMode = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY
 
+// Helper to safely access localStorage (might fail in Safari private mode)
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value)
+    } catch {
+      // Silently fail - private browsing mode
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      // Silently fail
+    }
+  }
+}
+
+// Timeout wrapper for async operations
+const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), ms)
+    )
+  ])
+}
+
 export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   session: null,
@@ -38,27 +73,34 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       if (isDemoMode) {
         // Demo mode - check localStorage for demo session
-        const demoSession = localStorage.getItem('evidenra-demo-session')
+        const demoSession = safeLocalStorage.getItem('evidenra-demo-session')
         if (demoSession) {
-          const parsed = JSON.parse(demoSession)
-          set({
-            user: parsed.user,
-            session: parsed,
-            isLoading: false,
-            isInitialized: true,
-          })
+          try {
+            const parsed = JSON.parse(demoSession)
+            set({
+              user: parsed.user,
+              session: parsed,
+              isLoading: false,
+              isInitialized: true,
+            })
+          } catch {
+            // Invalid JSON, clear it
+            safeLocalStorage.removeItem('evidenra-demo-session')
+            set({ isLoading: false, isInitialized: true })
+          }
         } else {
           set({ isLoading: false, isInitialized: true })
         }
         return
       }
 
-      // Real Supabase mode
-      const { data, error } = await auth.getSession()
+      // Real Supabase mode with timeout (5 seconds)
+      const { data, error } = await withTimeout(auth.getSession(), 5000)
 
       if (error) {
         console.error('Auth initialization error:', error)
-        set({ error: error.message, isLoading: false, isInitialized: true })
+        // Don't show error to user, just mark as initialized without session
+        set({ isLoading: false, isInitialized: true })
         return
       }
 
@@ -75,7 +117,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Auth state changed:', event)
         set({
           user: session?.user ?? null,
           session: session,
@@ -83,8 +124,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       })
     } catch (err) {
       console.error('Auth initialization failed:', err)
+      // Always mark as initialized even on error - let user try to login manually
       set({
-        error: err instanceof Error ? err.message : 'Initialization failed',
         isLoading: false,
         isInitialized: true,
       })
@@ -110,7 +151,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           access_token: 'demo-token',
           refresh_token: 'demo-refresh',
         }
-        localStorage.setItem('evidenra-demo-session', JSON.stringify(demoSession))
+        safeLocalStorage.setItem('evidenra-demo-session', JSON.stringify(demoSession))
         set({ user: demoUser as User, session: demoSession as any, isLoading: false })
         return { success: true }
       }
@@ -160,7 +201,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           access_token: 'demo-token',
           refresh_token: 'demo-refresh',
         }
-        localStorage.setItem('evidenra-demo-session', JSON.stringify(demoSession))
+        safeLocalStorage.setItem('evidenra-demo-session', JSON.stringify(demoSession))
         set({ user: demoUser as User, session: demoSession as any, isLoading: false })
         return { success: true }
       }
@@ -215,7 +256,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
     try {
       if (isDemoMode) {
-        localStorage.removeItem('evidenra-demo-session')
+        safeLocalStorage.removeItem('evidenra-demo-session')
         set({ user: null, session: null, isLoading: false })
         return
       }
