@@ -1,0 +1,8 @@
+Nr;Item;Dimension;Invertiert;Antwortformat
+1;"Meine Arbeit gibt mir das Gefühl, etwas Sinnvolles zu tun.";"Motivation";Nein;5-Punkt Likert
+2;"Ich erlebe regelmäßig Erfolgsmomente bei meiner Arbeit.";"Motivation";Nein;5-Punkt Likert
+3;"Die Anerkennung meiner Arbeit motiviert mich weiterzumachen.";"Motivation";Nein;5-Punkt Likert
+4;"Bürokratische Aufgaben belasten meinen Arbeitsalltag.";"Herausforderungen";Nein;5-Punkt Likert
+5;"Ich habe ausreichend Ressourcen, um meine Aufgaben zu erledigen.";"Herausforderungen";Nein;5-Punkt Likert
+6;"Der Zeitdruck bei der Arbeit ist für mich bewältigbar.";"Herausforderungen";Nein;5-Punkt Likert
+7;"Ich kann Beruf und Privatleben gut miteinander vereinbaren.";"Work-Life-Balance";Nein;5-Punkt Likert

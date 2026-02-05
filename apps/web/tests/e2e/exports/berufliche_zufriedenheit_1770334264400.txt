@@ -1,0 +1,55 @@
+FRAGEBOGEN: Berufliche Zufriedenheit
+==========================================
+Exportiert: 6.2.2026, 00:31:04
+Erstellt mit EVIDENRA Research
+
+ANLEITUNG:
+Bitte geben Sie an, inwieweit die folgenden Aussagen auf Sie zutreffen.
+
+ANTWORTSKALA:
+1 = Stimme gar nicht zu
+2 = Stimme nicht zu
+3 = Neutral
+4 = Stimme zu
+5 = Stimme voll zu
+
+==========================================
+ITEMS:
+==========================================
+
+1. Meine Arbeit gibt mir das Gefühl, etwas Sinnvolles zu tun.
+
+   [ ] 1  [ ] 2  [ ] 3  [ ] 4  [ ] 5
+
+2. Ich erlebe regelmäßig Erfolgsmomente bei meiner Arbeit.
+
+   [ ] 1  [ ] 2  [ ] 3  [ ] 4  [ ] 5
+
+3. Die Anerkennung meiner Arbeit motiviert mich weiterzumachen.
+
+   [ ] 1  [ ] 2  [ ] 3  [ ] 4  [ ] 5
+
+4. Bürokratische Aufgaben belasten meinen Arbeitsalltag.
+
+   [ ] 1  [ ] 2  [ ] 3  [ ] 4  [ ] 5
+
+5. Ich habe ausreichend Ressourcen, um meine Aufgaben zu erledigen.
+
+   [ ] 1  [ ] 2  [ ] 3  [ ] 4  [ ] 5
+
+6. Der Zeitdruck bei der Arbeit ist für mich bewältigbar.
+
+   [ ] 1  [ ] 2  [ ] 3  [ ] 4  [ ] 5
+
+7. Ich kann Beruf und Privatleben gut miteinander vereinbaren.
+
+   [ ] 1  [ ] 2  [ ] 3  [ ] 4  [ ] 5
+
+
+
+==========================================
+AUSWERTUNG:
+- Höhere Werte = höhere Zufriedenheit
+- Items 4, 5, 6 sind Herausforderungs-Items
+  (ggf. invertieren bei Gesamtscore)
+==========================================

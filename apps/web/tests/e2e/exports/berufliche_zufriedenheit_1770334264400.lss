@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document>
+  <LimeSurveyDocType>Survey</LimeSurveyDocType>
+  <DBVersion>400</DBVersion>
+
+  <surveys>
+    <fields>
+      <fieldname>sid</fieldname>
+      <fieldname>gsid</fieldname>
+      <fieldname>admin</fieldname>
+      <fieldname>adminemail</fieldname>
+      <fieldname>anonymized</fieldname>
+      <fieldname>format</fieldname>
+      <fieldname>saession</fieldname>
+      <fieldname>datestamp</fieldname>
+      <fieldname>ipaddr</fieldname>
+      <fieldname>refurl</fieldname>
+      <fieldname>publicstatistics</fieldname>
+      <fieldname>publicgraphs</fieldname>
+      <fieldname>listpublic</fieldname>
+      <fieldname>htmlemail</fieldname>
+      <fieldname>sendconfirmation</fieldname>
+      <fieldname>tokenanswerspersistence</fieldname>
+      <fieldname>assessments</fieldname>
+      <fieldname>usecaptcha</fieldname>
+      <fieldname>usetokens</fieldname>
+      <fieldname>showxquestions</fieldname>
+      <fieldname>showgroupinfo</fieldname>
+      <fieldname>shownoanswer</fieldname>
+      <fieldname>showqnumcode</fieldname>
+      <fieldname>bouncetime</fieldname>
+      <fieldname>bounceprocessing</fieldname>
+      <fieldname>bounceaccounttype</fieldname>
+      <fieldname>language</fieldname>
+      <fieldname>additional_languages</fieldname>
+      <fieldname>datecreated</fieldname>
+      <fieldname>showsurveypolicynotice</fieldname>
+    </fields>
+    <rows>
+      <row>
+        <sid>1770334264400</sid>
+        <gsid>1</gsid>
+        <admin>EVIDENRA</admin>
+        <adminemail>admin@evidenra.com</adminemail>
+        <anonymized>Y</anonymized>
+        <format>G</format>
+        <saession>N</saession>
+        <datestamp>Y</datestamp>
+        <ipaddr>N</ipaddr>
+        <refurl>N</refurl>
+        <publicstatistics>N</publicstatistics>
+        <publicgraphs>N</publicgraphs>
+        <listpublic>N</listpublic>
+        <htmlemail>Y</htmlemail>
+        <sendconfirmation>Y</sendconfirmation>
+        <tokenanswerspersistence>N</tokenanswerspersistence>
+        <assessments>N</assessments>
+        <usecaptcha>N</usecaptcha>
+        <usetokens>N</usetokens>
+        <showxquestions>Y</showxquestions>
+        <showgroupinfo>B</showgroupinfo>
+        <shownoanswer>Y</shownoanswer>
+        <showqnumcode>X</showqnumcode>
+        <bouncetime></bouncetime>
+        <bounceprocessing>N</bounceprocessing>
+        <bounceaccounttype></bounceaccounttype>
+        <language>de</language>
+        <additional_languages></additional_languages>
+        <datecreated>2026-02-05</datecreated>
+        <showsurveypolicynotice>0</showsurveypolicynotice>
+      </row>
+    </rows>
+  </surveys>
+
+  <surveys_languagesettings>
+    <rows>
+      <row>
+        <surveyls_survey_id>1770334264400</surveyls_survey_id>
+        <surveyls_language>de</surveyls_language>
+        <surveyls_title><![CDATA[Berufliche Zufriedenheit]]></surveyls_title>
+        <surveyls_description><![CDATA[Fragebogen zur Erfassung der beruflichen Zufriedenheit. Entwickelt auf Basis qualitativer Interviews.]]></surveyls_description>
+        <surveyls_welcometext><![CDATA[Vielen Dank für Ihre Teilnahme an dieser Befragung. Bitte geben Sie an, inwieweit die folgenden Aussagen auf Sie zutreffen.]]></surveyls_welcometext>
+        <surveyls_endtext><![CDATA[Vielen Dank für Ihre Teilnahme!]]></surveyls_endtext>
+      </row>
+    </rows>
+  </surveys_languagesettings>
+
+  <groups>
+    <rows>
+      <row>
+        <gid>1</gid>
+        <sid>1770334264400</sid>
+        <group_name><![CDATA[Berufliche Zufriedenheit]]></group_name>
+        <group_order>1</group_order>
+        <description><![CDATA[Bitte bewerten Sie die folgenden Aussagen.]]></description>
+        <language>de</language>
+        <randomization_group></randomization_group>
+        <grelevance></grelevance>
+      </row>
+    </rows>
+  </groups>
+
+  <questions>
+    <rows>
+        <row>
+          <qid>1</qid>
+          <parent_qid>0</parent_qid>
+          <sid>1770334264400</sid>
+          <gid>1</gid>
+          <type>5</type>
+          <title>Q1</title>
+          <question><![CDATA[Meine Arbeit gibt mir das Gefühl, etwas Sinnvolles zu tun.]]></question>
+          <preg></preg>
+          <help></help>
+          <other>N</other>
+          <mandatory>Y</mandatory>
+          <question_order>1</question_order>
+          <language>de</language>
+          <scale_id>0</scale_id>
+          <same_default>0</same_default>
+          <relevance>1</relevance>
+          <modulename></modulename>
+        </row>
+        <row>
+          <qid>2</qid>
+          <parent_qid>0</parent_qid>
+          <sid>1770334264400</sid>
+          <gid>1</gid>
+          <type>5</type>
+          <title>Q2</title>
+          <question><![CDATA[Ich erlebe regelmäßig Erfolgsmomente bei meiner Arbeit.]]></question>
+          <preg></preg>
+          <help></help>
+          <other>N</other>
+          <mandatory>Y</mandatory>
+          <question_order>2</question_order>
+          <language>de</language>
+          <scale_id>0</scale_id>
+          <same_default>0</same_default>
+          <relevance>1</relevance>
+          <modulename></modulename>
+        </row>
+        <row>
+          <qid>3</qid>
+          <parent_qid>0</parent_qid>
+          <sid>1770334264400</sid>
+          <gid>1</gid>
+          <type>5</type>
+          <title>Q3</title>
+          <question><![CDATA[Die Anerkennung meiner Arbeit motiviert mich weiterzumachen.]]></question>
+          <preg></preg>
+          <help></help>
+          <other>N</other>
+          <mandatory>Y</mandatory>
+          <question_order>3</question_order>
+          <language>de</language>
+          <scale_id>0</scale_id>
+          <same_default>0</same_default>
+          <relevance>1</relevance>
+          <modulename></modulename>
+        </row>
+        <row>
+          <qid>4</qid>
+          <parent_qid>0</parent_qid>
+          <sid>1770334264400</sid>
+          <gid>1</gid>
+          <type>5</type>
+          <title>Q4</title>
+          <question><![CDATA[Bürokratische Aufgaben belasten meinen Arbeitsalltag.]]></question>
+          <preg></preg>
+          <help></help>
+          <other>N</other>
+          <mandatory>Y</mandatory>
+          <question_order>4</question_order>
+          <language>de</language>
+          <scale_id>0</scale_id>
+          <same_default>0</same_default>
+          <relevance>1</relevance>
+          <modulename></modulename>
+        </row>
+        <row>
+          <qid>5</qid>
+          <parent_qid>0</parent_qid>
+          <sid>1770334264400</sid>
+          <gid>1</gid>
+          <type>5</type>
+          <title>Q5</title>
+          <question><![CDATA[Ich habe ausreichend Ressourcen, um meine Aufgaben zu erledigen.]]></question>
+          <preg></preg>
+          <help></help>
+          <other>N</other>
+          <mandatory>Y</mandatory>
+          <question_order>5</question_order>
+          <language>de</language>
+          <scale_id>0</scale_id>
+          <same_default>0</same_default>
+          <relevance>1</relevance>
+          <modulename></modulename>
+        </row>
+        <row>
+          <qid>6</qid>
+          <parent_qid>0</parent_qid>
+          <sid>1770334264400</sid>
+          <gid>1</gid>
+          <type>5</type>
+          <title>Q6</title>
+          <question><![CDATA[Der Zeitdruck bei der Arbeit ist für mich bewältigbar.]]></question>
+          <preg></preg>
+          <help></help>
+          <other>N</other>
+          <mandatory>Y</mandatory>
+          <question_order>6</question_order>
+          <language>de</language>
+          <scale_id>0</scale_id>
+          <same_default>0</same_default>
+          <relevance>1</relevance>
+          <modulename></modulename>
+        </row>
+        <row>
+          <qid>7</qid>
+          <parent_qid>0</parent_qid>
+          <sid>1770334264400</sid>
+          <gid>1</gid>
+          <type>5</type>
+          <title>Q7</title>
+          <question><![CDATA[Ich kann Beruf und Privatleben gut miteinander vereinbaren.]]></question>
+          <preg></preg>
+          <help></help>
+          <other>N</other>
+          <mandatory>Y</mandatory>
+          <question_order>7</question_order>
+          <language>de</language>
+          <scale_id>0</scale_id>
+          <same_default>0</same_default>
+          <relevance>1</relevance>
+          <modulename></modulename>
+        </row>
+    </rows>
+  </questions>
+
+  <answers>
+    <rows>
+      <row><qid>0</qid><code>1</code><answer><![CDATA[Stimme gar nicht zu]]></answer><sortorder>1</sortorder><assessment_value>1</assessment_value><language>de</language><scale_id>0</scale_id></row>
+      <row><qid>0</qid><code>2</code><answer><![CDATA[Stimme nicht zu]]></answer><sortorder>2</sortorder><assessment_value>2</assessment_value><language>de</language><scale_id>0</scale_id></row>
+      <row><qid>0</qid><code>3</code><answer><![CDATA[Neutral]]></answer><sortorder>3</sortorder><assessment_value>3</assessment_value><language>de</language><scale_id>0</scale_id></row>
+      <row><qid>0</qid><code>4</code><answer><![CDATA[Stimme zu]]></answer><sortorder>4</sortorder><assessment_value>4</assessment_value><language>de</language><scale_id>0</scale_id></row>
+      <row><qid>0</qid><code>5</code><answer><![CDATA[Stimme voll zu]]></answer><sortorder>5</sortorder><assessment_value>5</assessment_value><language>de</language><scale_id>0</scale_id></row>
+    </rows>
+  </answers>
+
+</document>
