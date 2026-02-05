@@ -280,20 +280,35 @@ export default function DashboardPage() {
 
 function NewProjectModal({ onClose }: { onClose: () => void }) {
   const { createProject } = useProjectStore()
-  const { organization } = useSubscriptionStore()
+  const { user } = useAuthStore()
+  const { organization, createOrganization } = useSubscriptionStore()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isCreating, setIsCreating] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !organization) return
+    if (!name.trim() || !user) return
 
     setIsCreating(true)
+
+    // Auto-create organization if user doesn't have one
+    let orgId = organization?.id
+    if (!orgId) {
+      const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Mein'
+      const newOrg = await createOrganization(`${userName}s Workspace`, user.id)
+      if (newOrg) {
+        orgId = newOrg.id
+      } else {
+        setIsCreating(false)
+        return
+      }
+    }
+
     const project = await createProject({
       name: name.trim(),
       description: description.trim() || undefined,
-      organizationId: organization.id,
+      organizationId: orgId,
     })
 
     if (project) {
