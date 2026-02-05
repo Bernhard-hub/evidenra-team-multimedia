@@ -498,7 +498,7 @@ Verfasse einen wissenschaftlichen Methodenteil für die Skalenvalidierung.
 
 ### SKALA:
 - Name: ${scale.name}
-- Items: ${scale.items.length}
+- Items: ${scale.items?.length || 0}
 - Dimensionen: ${scale.dimensions?.length || 1}
 - Response-Format: ${scale.responseFormat.type} (${scale.responseFormat.points} Punkte)
 

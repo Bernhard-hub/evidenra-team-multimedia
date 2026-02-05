@@ -95,7 +95,7 @@ export class DDIExporter {
     <s:Abstract>
       <r:Content xml:lang="${langCode}">
         Messinstrument für: ${this.escapeXml(scale.construct)}
-        Items: ${scale.items.length}
+        Items: ${scale.items?.length || 0}
         ${scale.dimensions ? `Dimensionen: ${scale.dimensions.map(d => d.name).join(', ')}` : ''}
       </r:Content>
     </s:Abstract>

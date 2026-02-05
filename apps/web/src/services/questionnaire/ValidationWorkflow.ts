@@ -749,7 +749,7 @@ export class ValidationWorkflowManager {
    * Create validation plan for a scale
    */
   static createValidationPlan(scale: Scale): ValidationStudyPlan {
-    const itemCount = scale.items.length
+    const itemCount = scale.items?.length || 0
     const dimensionCount = scale.dimensions?.length || 1
 
     return {

@@ -379,7 +379,7 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
                 >
                   <p className="text-sm text-white truncate">{scale.name}</p>
                   <p className="text-xs text-slate-500">
-                    {scale.items.length} {t.items}
+                    {scale.items?.length || 0} {t.items}
                   </p>
                 </button>
               ))}

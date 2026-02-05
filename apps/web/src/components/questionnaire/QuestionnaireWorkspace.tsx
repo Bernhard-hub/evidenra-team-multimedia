@@ -867,7 +867,7 @@ const ScaleCard: React.FC<ScaleCardProps> = ({
             ))}
             {scale.items?.length > 3 && (
               <p className="text-xs text-slate-600">
-                +{scale.items.length - 3} more...
+                +{scale.items?.length || 0 - 3} more...
               </p>
             )}
           </div>

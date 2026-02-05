@@ -221,7 +221,7 @@ export const ScaleEditor: React.FC<ScaleEditorProps> = ({
   // Move item
   const moveItem = useCallback((index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1
-    if (newIndex < 0 || newIndex >= scale.items.length) return
+    if (newIndex < 0 || newIndex >= scale.items?.length || 0) return
 
     const newItems = [...scale.items]
     const [item] = newItems.splice(index, 1)
@@ -297,7 +297,7 @@ export const ScaleEditor: React.FC<ScaleEditorProps> = ({
 
   // Stats
   const stats = useMemo(() => ({
-    totalItems: scale.items.length,
+    totalItems: scale.items?.length || 0,
     reversedItems: scale.items.filter(i => i.isReversed).length,
     dimensions: scale.dimensions?.length || 0,
   }), [scale])
@@ -428,7 +428,7 @@ export const ScaleEditor: React.FC<ScaleEditorProps> = ({
 
             {/* Items Section */}
             <CollapsibleSection
-              title={`${t.items} (${scale.items.length})`}
+              title={`${t.items} (${scale.items?.length || 0})`}
               icon={<IconEdit size={16} />}
               isExpanded={expandedSections.includes('items')}
               onToggle={() => toggleSection('items')}
@@ -446,7 +446,7 @@ export const ScaleEditor: React.FC<ScaleEditorProps> = ({
                     onMoveDown={() => moveItem(index, 'down')}
                     onDuplicate={() => duplicateItem(index)}
                     isFirst={index === 0}
-                    isLast={index === scale.items.length - 1}
+                    isLast={index === scale.items?.length || 0 - 1}
                     language={language}
                     readOnly={readOnly}
                   />

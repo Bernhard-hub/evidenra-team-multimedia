@@ -341,7 +341,7 @@ const OverviewSection: React.FC<SectionProps & { scale: Scale }> = ({
         />
         <StatCard
           label={t.items}
-          value={scale.items.length}
+          value={scale.items?.length || 0}
           icon={<IconChartDots size={20} />}
         />
         <StatCard

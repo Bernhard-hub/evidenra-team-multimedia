@@ -755,7 +755,7 @@ export class NexusItemGenerator {
     if (constructAnalysis.recommendation === 'adapt-existing') {
       recommendation = `Empfehlung: Adaptieren Sie "${constructAnalysis.existingScales[0]?.scale.name}" und ergänzen Sie mit ${generatedItems.qualitySummary.passed} generierten Items.`
     } else {
-      recommendation = `Neue Skala mit ${scale.items.length} Items erstellt. Nächster Schritt: Content-Validierung durch Experten.`
+      recommendation = `Neue Skala mit ${scale.items?.length || 0} Items erstellt. Nächster Schritt: Content-Validierung durch Experten.`
     }
 
     return {

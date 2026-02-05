@@ -494,7 +494,7 @@ const ScaleListItem: React.FC<ScaleListItemProps> = ({
         <div className="flex items-center gap-2">
           {/* Item count */}
           <span className="px-2 py-1 rounded bg-slate-700/50 text-xs text-slate-400">
-            {scale.items.length} {t.items}
+            {scale.items?.length || 0} {t.items}
           </span>
 
           {/* Reliability */}
@@ -677,7 +677,7 @@ const ScaleGridItem: React.FC<ScaleGridItemProps> = ({
 
       <div className="flex items-center gap-2">
         <span className="px-2 py-0.5 rounded bg-slate-700/50 text-xs text-slate-400">
-          {scale.items.length} items
+          {scale.items?.length || 0} items
         </span>
         <span className={`px-2 py-0.5 rounded text-xs ${
           scale.psychometrics.cronbachAlpha >= 0.80
