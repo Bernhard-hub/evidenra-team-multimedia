@@ -142,27 +142,21 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
-      // 1. Find user's organization membership
+      // 1. Find user's organization membership (separate queries to avoid PostgREST issues)
       const { data: membership, error: memberError } = await db
         .from('organization_members')
-        .select(`
-          role,
-          organizations (
-            id,
-            name,
-            slug,
-            created_at
-          )
-        `)
+        .select('role, organization_id')
         .eq('user_id', userId)
+        .limit(1)
         .single()
 
       if (memberError && memberError.code !== 'PGRST116') {
         // PGRST116 = no rows found, which is OK for new users
+        console.error('Member lookup error:', memberError)
         throw memberError
       }
 
-      if (!membership || !membership.organizations) {
+      if (!membership || !membership.organization_id) {
         // User has no organization - needs onboarding
         set({
           organization: null,
@@ -175,7 +169,25 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
         return
       }
 
-      const org = membership.organizations
+      // Fetch organization separately
+      const { data: org, error: orgError } = await db
+        .from('organizations')
+        .select('id, name, slug, created_at')
+        .eq('id', membership.organization_id)
+        .single()
+
+      if (orgError || !org) {
+        console.error('Org lookup error:', orgError)
+        set({
+          organization: null,
+          subscription: null,
+          planLimits: PLAN_LIMITS.free,
+          memberRole: membership?.role || null,
+          isLoading: false,
+          isInitialized: true
+        })
+        return
+      }
       const organization: Organization = {
         id: org.id,
         name: org.name,
