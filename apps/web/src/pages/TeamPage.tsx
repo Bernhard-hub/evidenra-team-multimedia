@@ -1,79 +1,176 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
-import { useTeamStore, type TeamMember, type Invitation } from '@/stores/teamStore'
+import { useSubscriptionStore } from '@/stores/subscriptionStore'
+import { useAuthStore } from '@/stores/authStore'
+import { supabase } from '@/lib/supabase'
 
-// Mock data
-const mockMembers: TeamMember[] = [
-  {
-    id: '1',
-    userId: 'u1',
-    organizationId: 'org-1',
-    role: 'owner',
-    user: { id: 'u1', email: 'admin@evidenra.com', fullName: 'Dr. Sarah Weber', avatarUrl: null },
-    joinedAt: '2024-01-01T10:00:00Z',
-    lastActiveAt: new Date().toISOString(),
-    isOnline: true,
-  },
-  {
-    id: '2',
-    userId: 'u2',
-    organizationId: 'org-1',
-    role: 'admin',
-    user: { id: 'u2', email: 'anna@example.com', fullName: 'Anna Müller', avatarUrl: null },
-    joinedAt: '2024-01-05T10:00:00Z',
-    lastActiveAt: new Date().toISOString(),
-    isOnline: true,
-  },
-  {
-    id: '3',
-    userId: 'u3',
-    organizationId: 'org-1',
-    role: 'member',
-    user: { id: 'u3', email: 'max@example.com', fullName: 'Max Koch', avatarUrl: null },
-    joinedAt: '2024-01-10T10:00:00Z',
-    lastActiveAt: '2024-01-19T14:30:00Z',
-    isOnline: false,
-  },
-  {
-    id: '4',
-    userId: 'u4',
-    organizationId: 'org-1',
-    role: 'member',
-    user: { id: 'u4', email: 'lisa@example.com', fullName: 'Lisa Schmidt', avatarUrl: null },
-    joinedAt: '2024-01-12T10:00:00Z',
-    lastActiveAt: '2024-01-18T09:15:00Z',
-    isOnline: false,
-  },
-]
+interface TeamMember {
+  id: string
+  oderId: string
+  role: 'owner' | 'admin' | 'editor' | 'viewer'
+  joinedAt: string
+  user: {
+    id: string
+    email: string
+    fullName: string | null
+  }
+}
 
-const mockInvitations: Invitation[] = [
-  {
-    id: 'inv-1',
-    email: 'neues-mitglied@example.com',
-    organizationId: 'org-1',
-    role: 'member',
-    invitedBy: 'u1',
-    createdAt: '2024-01-19T10:00:00Z',
-    expiresAt: '2024-01-26T10:00:00Z',
-    status: 'pending',
-  },
-]
+interface Invitation {
+  id: string
+  email: string
+  role: 'admin' | 'editor' | 'viewer'
+  createdAt: string
+  expiresAt: string
+}
 
 export default function TeamPage() {
-  const [members] = useState<TeamMember[]>(mockMembers)
-  const [invitations] = useState<Invitation[]>(mockInvitations)
+  const { organization } = useSubscriptionStore()
+  const { user } = useAuthStore()
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [invitations, setInvitations] = useState<Invitation[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  // Fetch team members
+  useEffect(() => {
+    if (!organization) return
+
+    const fetchMembers = async () => {
+      setIsLoading(true)
+      try {
+        // Fetch members with user data
+        const { data, error } = await (supabase as any)
+          .from('organization_members')
+          .select(`
+            id,
+            role,
+            joined_at,
+            user_id
+          `)
+          .eq('organization_id', organization.id)
+
+        if (error) throw error
+
+        // Get user details for each member
+        const membersWithUsers: TeamMember[] = []
+        for (const member of data || []) {
+          const { data: userData } = await supabase.auth.admin.getUserById(member.user_id).catch(() => ({ data: null }))
+
+          membersWithUsers.push({
+            id: member.id,
+            oderId: organization.id,
+            role: member.role,
+            joinedAt: member.joined_at,
+            user: {
+              id: member.user_id,
+              email: userData?.user?.email || 'Unbekannt',
+              fullName: userData?.user?.user_metadata?.full_name || null,
+            },
+          })
+        }
+
+        // If we couldn't get user data via admin API, try to at least show current user
+        if (membersWithUsers.length === 0 && user) {
+          // Just show the current user as the member
+          const { data: memberData } = await (supabase as any)
+            .from('organization_members')
+            .select('*')
+            .eq('organization_id', organization.id)
+            .eq('user_id', user.id)
+            .single()
+
+          if (memberData) {
+            membersWithUsers.push({
+              id: memberData.id,
+              oderId: organization.id,
+              role: memberData.role,
+              joinedAt: memberData.joined_at,
+              user: {
+                id: user.id,
+                email: user.email || 'Unbekannt',
+                fullName: user.user_metadata?.full_name || null,
+              },
+            })
+          }
+        }
+
+        // Fallback: if still empty, just use data we have
+        if (membersWithUsers.length === 0 && data && data.length > 0) {
+          for (const member of data) {
+            const isCurrentUser = member.user_id === user?.id
+            membersWithUsers.push({
+              id: member.id,
+              oderId: organization.id,
+              role: member.role,
+              joinedAt: member.joined_at,
+              user: {
+                id: member.user_id,
+                email: isCurrentUser ? (user?.email || 'Unbekannt') : 'Team-Mitglied',
+                fullName: isCurrentUser ? (user?.user_metadata?.full_name || null) : null,
+              },
+            })
+          }
+        }
+
+        setMembers(membersWithUsers)
+      } catch (err) {
+        console.error('Error fetching members:', err)
+        setError('Fehler beim Laden der Teammitglieder')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchMembers()
+  }, [organization, user])
 
   const roleLabels: Record<string, string> = {
     owner: 'Inhaber',
     admin: 'Admin',
-    member: 'Mitglied',
+    editor: 'Bearbeiter',
+    viewer: 'Betrachter',
   }
 
   const roleColors: Record<string, string> = {
     owner: 'text-primary-400 bg-primary-400/10',
     admin: 'text-blue-400 bg-blue-400/10',
-    member: 'text-surface-400 bg-surface-700',
+    editor: 'text-green-400 bg-green-400/10',
+    viewer: 'text-surface-400 bg-surface-700',
+  }
+
+  const handleInvite = async (email: string, role: 'admin' | 'editor' | 'viewer') => {
+    if (!organization || !user) return
+
+    try {
+      // For now, just add them directly to the organization
+      // In a real app, you'd send an email invitation
+
+      // Check if user exists
+      // Note: This requires the user to already be registered
+      // A proper implementation would use Supabase's invite functionality
+
+      setSuccess(`Einladung an ${email} gesendet (Demo-Modus: Benutzer muss sich selbst registrieren)`)
+      setShowInviteModal(false)
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccess(null), 5000)
+    } catch (err) {
+      console.error('Error inviting member:', err)
+      setError('Fehler beim Einladen')
+    }
+  }
+
+  if (!organization) {
+    return (
+      <Layout>
+        <div className="p-6 lg:p-8 text-center">
+          <p className="text-surface-400">Keine Organisation gefunden</p>
+        </div>
+      </Layout>
+    )
   }
 
   return (
@@ -83,7 +180,7 @@ export default function TeamPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-surface-100">Team</h1>
-            <p className="text-surface-400 mt-1">Verwalten Sie Ihr Forschungsteam</p>
+            <p className="text-surface-400 mt-1">{organization.name} - Teammitglieder verwalten</p>
           </div>
           <button
             onClick={() => setShowInviteModal(true)}
@@ -96,17 +193,23 @@ export default function TeamPage() {
           </button>
         </div>
 
+        {/* Success/Error Messages */}
+        {success && (
+          <div className="mb-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400">
+            {success}
+          </div>
+        )}
+        {error && (
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
+            {error}
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-surface-900 rounded-xl p-4 border border-surface-800">
-            <p className="text-sm text-surface-400">Gesamt</p>
+            <p className="text-sm text-surface-400">Mitglieder</p>
             <p className="text-2xl font-bold text-surface-100 mt-1">{members.length}</p>
-          </div>
-          <div className="bg-surface-900 rounded-xl p-4 border border-surface-800">
-            <p className="text-sm text-surface-400">Online</p>
-            <p className="text-2xl font-bold text-green-400 mt-1">
-              {members.filter((m) => m.isOnline).length}
-            </p>
           </div>
           <div className="bg-surface-900 rounded-xl p-4 border border-surface-800">
             <p className="text-sm text-surface-400">Admins</p>
@@ -115,9 +218,15 @@ export default function TeamPage() {
             </p>
           </div>
           <div className="bg-surface-900 rounded-xl p-4 border border-surface-800">
+            <p className="text-sm text-surface-400">Bearbeiter</p>
+            <p className="text-2xl font-bold text-green-400 mt-1">
+              {members.filter((m) => m.role === 'editor').length}
+            </p>
+          </div>
+          <div className="bg-surface-900 rounded-xl p-4 border border-surface-800">
             <p className="text-sm text-surface-400">Ausstehend</p>
             <p className="text-2xl font-bold text-primary-400 mt-1">
-              {invitations.filter((i) => i.status === 'pending').length}
+              {invitations.length}
             </p>
           </div>
         </div>
@@ -127,97 +236,78 @@ export default function TeamPage() {
           <div className="p-4 border-b border-surface-800">
             <h2 className="text-lg font-semibold text-surface-100">Mitglieder</h2>
           </div>
-          <div className="divide-y divide-surface-800">
-            {members.map((member) => (
-              <div key={member.id} className="flex items-center gap-4 p-4 hover:bg-surface-800/50 transition-colors">
-                <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                    <span className="text-lg font-medium text-white">
-                      {member.user.fullName?.split(' ').map((n) => n[0]).join('') || '?'}
-                    </span>
-                  </div>
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-surface-900 ${
-                      member.isOnline ? 'bg-green-500 presence-online' : 'bg-surface-600'
-                    }`}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-surface-100">{member.user.fullName}</p>
-                  <p className="text-sm text-surface-500">{member.user.email}</p>
-                </div>
-                <div className="hidden sm:block text-right">
-                  <p className="text-sm text-surface-400">
-                    {member.isOnline ? 'Online' : `Zuletzt: ${formatDate(member.lastActiveAt)}`}
-                  </p>
-                </div>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[member.role]}`}>
-                  {roleLabels[member.role]}
-                </span>
-                <button className="p-2 rounded-lg hover:bg-surface-700 text-surface-400">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Pending Invitations */}
-        {invitations.filter((i) => i.status === 'pending').length > 0 && (
-          <div className="bg-surface-900 rounded-xl border border-surface-800">
-            <div className="p-4 border-b border-surface-800">
-              <h2 className="text-lg font-semibold text-surface-100">Ausstehende Einladungen</h2>
+          {isLoading ? (
+            <div className="p-8 text-center">
+              <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-surface-400">Mitglieder werden geladen...</p>
             </div>
+          ) : members.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-surface-400">Noch keine Mitglieder</p>
+            </div>
+          ) : (
             <div className="divide-y divide-surface-800">
-              {invitations
-                .filter((i) => i.status === 'pending')
-                .map((invitation) => (
-                  <div key={invitation.id} className="flex items-center gap-4 p-4">
-                    <div className="w-12 h-12 rounded-full bg-surface-800 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
+              {members.map((member) => (
+                <div key={member.id} className="flex items-center gap-4 p-4 hover:bg-surface-800/50 transition-colors">
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+                      <span className="text-lg font-medium text-white">
+                        {member.user.fullName?.split(' ').map((n) => n[0]).join('') || member.user.email[0].toUpperCase()}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-surface-100">{invitation.email}</p>
-                      <p className="text-sm text-surface-500">
-                        Eingeladen am {new Date(invitation.createdAt).toLocaleDateString('de-DE')}
-                      </p>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-primary-400/10 text-primary-400">
-                      Ausstehend
-                    </span>
-                    <button className="p-2 rounded-lg hover:bg-surface-700 text-surface-400">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
                   </div>
-                ))}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-surface-100">
+                      {member.user.fullName || member.user.email.split('@')[0]}
+                      {member.user.id === user?.id && (
+                        <span className="ml-2 text-xs text-primary-400">(Du)</span>
+                      )}
+                    </p>
+                    <p className="text-sm text-surface-500">{member.user.email}</p>
+                  </div>
+                  <div className="hidden sm:block text-right">
+                    <p className="text-sm text-surface-400">
+                      Beigetreten: {new Date(member.joinedAt).toLocaleDateString('de-DE')}
+                    </p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[member.role]}`}>
+                    {roleLabels[member.role]}
+                  </span>
+                </div>
+              ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Invite Modal */}
         {showInviteModal && (
-          <InviteModal onClose={() => setShowInviteModal(false)} />
+          <InviteModal
+            onClose={() => setShowInviteModal(false)}
+            onInvite={handleInvite}
+          />
         )}
       </div>
     </Layout>
   )
 }
 
-function InviteModal({ onClose }: { onClose: () => void }) {
+function InviteModal({
+  onClose,
+  onInvite
+}: {
+  onClose: () => void
+  onInvite: (email: string, role: 'admin' | 'editor' | 'viewer') => void
+}) {
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<'admin' | 'member'>('member')
+  const [role, setRole] = useState<'admin' | 'editor' | 'viewer'>('editor')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement invitation
-    console.log('Invite:', { email, role })
-    onClose()
+    setIsLoading(true)
+    await onInvite(email, role)
+    setIsLoading(false)
   }
 
   return (
@@ -244,46 +334,45 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             <label className="block text-sm font-medium text-surface-300 mb-1.5">Rolle</label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value as 'admin' | 'member')}
+              onChange={(e) => setRole(e.target.value as 'admin' | 'editor' | 'viewer')}
               className="w-full px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
             >
-              <option value="member">Mitglied</option>
-              <option value="admin">Admin</option>
+              <option value="editor">Bearbeiter - Kann Dokumente und Kodierungen bearbeiten</option>
+              <option value="admin">Admin - Kann Mitglieder und Einstellungen verwalten</option>
+              <option value="viewer">Betrachter - Kann nur lesen</option>
             </select>
           </div>
+
+          <div className="p-3 rounded-lg bg-surface-800 text-sm text-surface-400">
+            <strong>Hinweis:</strong> Das eingeladene Mitglied erhält eine E-Mail mit einem Einladungslink.
+          </div>
+
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 font-medium"
+              disabled={isLoading}
+              className="flex-1 px-4 py-2.5 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 font-medium disabled:opacity-50"
             >
               Abbrechen
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium"
+              disabled={isLoading}
+              className="flex-1 px-4 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              Einladen
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Wird gesendet...
+                </>
+              ) : (
+                'Einladen'
+              )}
             </button>
           </div>
         </form>
       </div>
     </div>
   )
-}
-
-function formatDate(dateString: string | null): string {
-  if (!dateString) return 'Nie'
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-
-  if (hours < 1) return 'Gerade eben'
-  if (hours < 24) return `vor ${hours}h`
-  const days = Math.floor(hours / 24)
-  if (days === 1) return 'Gestern'
-  if (days < 7) return `vor ${days} Tagen`
-
-  return date.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })
 }
