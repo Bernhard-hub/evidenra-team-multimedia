@@ -256,24 +256,32 @@ export const projectsApi = {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { data: null, error: new Error('Not authenticated') }
 
-    console.log('Creating project:', { organizationId: data.organizationId, name: data.name })
+    console.log('Creating project via RPC:', { organizationId: data.organizationId, name: data.name })
 
-    // Note: created_by is set by database trigger if column exists
-    const { data: project, error } = await supabase
-      .from('projects')
-      .insert({
-        organization_id: data.organizationId,
-        name: data.name,
-        description: data.description,
+    // Use RPC function to bypass schema cache issues
+    const { data: projectId, error: rpcError } = await supabase
+      .rpc('create_project', {
+        p_organization_id: data.organizationId,
+        p_name: data.name,
+        p_description: data.description || null
       })
-      .select()
-      .single()
 
-    if (error) {
-      console.error('Project creation error:', error.message, error.details, error.hint, error.code)
+    if (rpcError) {
+      console.error('Project creation error:', rpcError.message, rpcError.details, rpcError.hint, rpcError.code)
+      return { data: null, error: rpcError }
     }
 
-    return { data: project, error }
+    // Return a minimal project object
+    const project = {
+      id: projectId,
+      organization_id: data.organizationId,
+      name: data.name,
+      description: data.description || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+
+    return { data: project, error: null }
   },
 
   async update(id: string, updates: { name?: string; description?: string }) {
