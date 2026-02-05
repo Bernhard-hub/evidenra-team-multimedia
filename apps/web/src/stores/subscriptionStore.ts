@@ -147,7 +147,7 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
         .from('organization_members')
         .select(`
           role,
-          organization:organizations (
+          organizations (
             id,
             name,
             slug,
@@ -162,7 +162,7 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
         throw memberError
       }
 
-      if (!membership || !membership.organization) {
+      if (!membership || !membership.organizations) {
         // User has no organization - needs onboarding
         set({
           organization: null,
@@ -175,7 +175,7 @@ export const useSubscriptionStore = create<SubscriptionState>()((set, get) => ({
         return
       }
 
-      const org = membership.organization
+      const org = membership.organizations
       const organization: Organization = {
         id: org.id,
         name: org.name,
