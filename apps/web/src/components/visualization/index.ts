@@ -10,3 +10,7 @@ export { default as CategoryNetworkGraph } from './network/CategoryNetworkGraph'
 
 // Sprint 3 - Psychometrics
 export { default as PsychometricsDashboard } from './psychometrics/PsychometricsDashboard'
+
+// Sprint 4 - Response Analysis & Reliability Simulation
+export { default as ResponseDistribution } from './psychometrics/ResponseDistribution'
+export { default as ReliabilitySimulator } from './psychometrics/ReliabilitySimulator'
