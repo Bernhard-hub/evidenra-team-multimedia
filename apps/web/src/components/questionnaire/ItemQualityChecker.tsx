@@ -47,9 +47,15 @@ interface ItemInput {
   text: string
 }
 
+interface ItemIssue {
+  type: string
+  severity: 'error' | 'warning' | 'info'
+  description: string
+}
+
 interface QualityResult {
   score: number
-  issues: string[]
+  issues: (string | ItemIssue)[]
   suggestions: string[]
 }
 
@@ -413,7 +419,7 @@ export const ItemQualityChecker: React.FC<ItemQualityCheckerProps> = ({
             result={analysisResults[index]}
             onUpdate={(text) => updateItem(item.id, text)}
             onRemove={() => removeItem(item.id)}
-            onRequestAI={() => onRequestAISuggestion?.(item.text, analysisResults[index].issues)}
+            onRequestAI={() => onRequestAISuggestion?.(item.text, analysisResults[index].issues.map(i => typeof i === 'string' ? i : i.description))}
             language={language}
           />
         ))}
@@ -534,7 +540,7 @@ const ItemRow: React.FC<ItemRowProps> = ({
                   key={i}
                   className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs"
                 >
-                  {issue}
+                  {typeof issue === 'string' ? issue : issue.description}
                 </span>
               ))}
             </div>
