@@ -5,6 +5,8 @@ import { Suspense, lazy, useEffect, useState } from 'react'
 import { MethodologyProvider, FloatingGuideButton } from '@/contexts/MethodologyContext'
 import OnboardingModal from '@/components/OnboardingModal'
 import { PaywallOverlay } from '@/components/SubscriptionBanner'
+import { UserWatermark } from '@/components/UserWatermark'
+import { registerDevice } from '@/hooks/useDeviceFingerprint'
 
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
@@ -49,6 +51,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     }
   }, [needsOnboarding, showOnboarding])
 
+  // Register device for fingerprinting (Phase 2: Account-Sharing Detection)
+  useEffect(() => {
+    if (user?.id) {
+      registerDevice(user.id).catch(() => {
+        // Silently fail - fingerprinting is optional
+      })
+    }
+  }, [user?.id])
+
   // Show loading while initializing auth
   if (!authInitialized || authLoading) {
     return <LoadingSpinner />
@@ -67,6 +78,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       {children}
+
+      {/* Phase 2: Unsichtbares Wasserzeichen mit User-ID */}
+      <UserWatermark />
 
       {/* Onboarding Modal - for new users without organization */}
       <OnboardingModal

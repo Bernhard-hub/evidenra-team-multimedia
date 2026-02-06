@@ -20,6 +20,9 @@ import type {
   AKIHComponentId,
   ValidationStatus,
   CodingValidation,
+} from '@/types/akih'
+
+import {
   DEFAULT_AKIH_CONFIG,
   QUALITY_THRESHOLDS,
 } from '@/types/akih'

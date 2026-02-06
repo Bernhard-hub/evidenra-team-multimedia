@@ -30,8 +30,35 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: 'dist',
-      sourcemap: mode !== 'production',
-      minify: 'esbuild',
+      // Phase 1: Kopierschutz - Source Maps DEAKTIVIERT in Production
+      sourcemap: mode === 'development',
+      // Phase 1: Terser statt esbuild für bessere Obfuscation
+      minify: mode === 'production' ? 'terser' : 'esbuild',
+      terserOptions: mode === 'production' ? {
+        compress: {
+          // Console.log Statements entfernen
+          drop_console: true,
+          drop_debugger: true,
+          // Toten Code entfernen
+          dead_code: true,
+          // Unbenutzte Variablen entfernen
+          unused: true,
+          // Passes für bessere Kompression
+          passes: 2,
+        },
+        mangle: {
+          // Variablennamen verschleiern
+          toplevel: true,
+          // Safari-kompatibel bleiben
+          safari10: true,
+        },
+        format: {
+          // Kommentare entfernen
+          comments: false,
+          // Code kompakt halten
+          beautify: false,
+        },
+      } : undefined,
       rollupOptions: {
         output: {
           manualChunks: {
