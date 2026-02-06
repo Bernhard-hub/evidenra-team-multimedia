@@ -1,6 +1,9 @@
-// Visualization Components - Sprint 1
+// Visualization Components - Sprint 1 & 2
 export { default as CodeFrequencyChart } from './CodeFrequencyChart'
 export { default as CoOccurrenceMatrix } from './CoOccurrenceMatrix'
 export { default as CodeDocumentHeatmap } from './CodeDocumentHeatmap'
 export { default as VisualizationDashboard } from './VisualizationDashboard'
 export { ChartExportButton } from './shared/ChartExportButton'
+
+// Sprint 2 - Network Visualizations
+export { default as CategoryNetworkGraph } from './network/CategoryNetworkGraph'

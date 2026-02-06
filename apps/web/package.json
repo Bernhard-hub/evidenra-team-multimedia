@@ -30,6 +30,8 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0",
     "recharts": "^3.7.0",
+    "vis-data": "^8.0.3",
+    "vis-network": "^10.0.2",
     "xlsx": "^0.18.5",
     "zustand": "^4.5.0"
   },
@@ -37,6 +39,7 @@
     "@playwright/test": "^1.58.1",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
+    "@types/vis": "^4.21.27",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
     "pg": "^8.18.0",
