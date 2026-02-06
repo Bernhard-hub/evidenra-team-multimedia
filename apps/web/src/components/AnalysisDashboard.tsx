@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   CodeFrequencyChart,
   CoOccurrenceMatrix,
@@ -8,6 +8,8 @@ import {
 } from './visualization'
 import CodingTimeline from './CodingTimeline'
 import IRRPanel from './IRRPanel'
+import { AKIHScoreDashboard } from './akih'
+import { useAKIHScore } from '@/hooks/useAKIHScore'
 import type { Code, Coding, Document } from '@/stores/projectStore'
 
 interface AnalysisDashboardProps {
@@ -16,7 +18,7 @@ interface AnalysisDashboardProps {
   documents: Document[]
 }
 
-type ChartType = 'frequency' | 'cooccurrence' | 'document-heatmap' | 'network' | 'trends' | 'timeline' | 'methods' | 'irr'
+type ChartType = 'frequency' | 'cooccurrence' | 'document-heatmap' | 'network' | 'trends' | 'timeline' | 'methods' | 'irr' | 'akih'
 
 export default function AnalysisDashboard({
   codes,
@@ -43,6 +45,40 @@ export default function AnalysisDashboard({
       ai: codings.filter(c => c.codingMethod && c.codingMethod !== 'manual').length,
     },
   }
+
+  // AKIH Score calculation
+  const { result: akihResult, calculateScore: calculateAKIH, isCalculating: akihLoading } = useAKIHScore({
+    config: { enabled: true },
+  })
+
+  // Calculate AKIH when data changes
+  const akihInput = useMemo(() => ({
+    codings: codings.map(c => ({
+      id: c.id,
+      codeId: c.codeId,
+      documentId: c.documentId,
+      codingMethod: c.codingMethod,
+      createdAt: c.createdAt ? new Date(c.createdAt) : undefined,
+      aiReasoning: c.aiReasoning,
+    })),
+    codes: codes.map(c => ({
+      id: c.id,
+      name: c.name,
+      categoryId: c.categoryId,
+      parentId: c.parentId,
+    })),
+    documents: documents.map(d => ({
+      id: d.id,
+      name: d.name,
+    })),
+  }), [codings, codes, documents])
+
+  // Auto-calculate on mount and data change
+  useMemo(() => {
+    if (codings.length > 0 && codes.length > 0) {
+      calculateAKIH(akihInput)
+    }
+  }, [akihInput, calculateAKIH, codings.length, codes.length])
 
   return (
     <div className="space-y-6">
@@ -134,6 +170,11 @@ export default function AnalysisDashboard({
             isActive={activeChart === 'irr'}
             onClick={() => setActiveChart('irr')}
           />
+          <ChartTab
+            label="AKIH"
+            isActive={activeChart === 'akih'}
+            onClick={() => setActiveChart('akih')}
+          />
         </div>
 
         <div className="p-6">
@@ -219,6 +260,21 @@ export default function AnalysisDashboard({
               codes={codes}
               documents={documents}
             />
+          )}
+
+          {activeChart === 'akih' && akihResult && (
+            <AKIHScoreDashboard
+              result={akihResult}
+              onRefresh={() => calculateAKIH(akihInput)}
+              isLoading={akihLoading}
+              showValidationButton={false}
+            />
+          )}
+
+          {activeChart === 'akih' && !akihResult && (
+            <div className="text-center py-12 text-surface-500">
+              <p className="text-sm">AKIH Score wird berechnet...</p>
+            </div>
           )}
         </div>
       </div>
