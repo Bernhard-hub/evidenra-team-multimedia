@@ -97,7 +97,7 @@ Consider context, language, and emotions.`
       }
     }
 
-    return prompts[expertNumber as 1 | 2 | 3][lang]
+    return prompts[expertNumber as 1 | 2 | 3][lang as 'de' | 'en']
   }
 
   private async codeWithExpert(

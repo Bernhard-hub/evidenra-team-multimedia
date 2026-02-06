@@ -33,11 +33,9 @@ import {
   IconArrowRight,
   IconSparkles,
   IconMinimize,
-  IconMaximize,
   IconWand,
   IconBulb,
   IconTargetArrow,
-  IconRefresh
 } from '@tabler/icons-react'
 import {
   METHODOLOGIES,
@@ -328,15 +326,15 @@ export const MethodologyGuide: React.FC<MethodologyGuideProps> = ({
   onOpenAICoding,
   onOpenIRR,
   onOpenNexus,
-  documentCount = 0,
-  codeCount = 0,
+  documentCount: _documentCount = 0,
+  codeCount: _codeCount = 0,
   codingCount = 0,
   memoCount = 0
 }) => {
-  const navigate = useNavigate()
+  const _navigate = useNavigate()
   const [state, actions, info] = useMethodologyWorkflow(projectId)
   const [view, setView] = useState<'select' | 'workflow'>(state.methodology ? 'workflow' : 'select')
-  const [showReturnHint, setShowReturnHint] = useState(false)
+  const [_showReturnHint, setShowReturnHint] = useState(false)
 
   // Use context minimize if provided, otherwise fallback to close
   const handleMinimize = onMinimize || onClose

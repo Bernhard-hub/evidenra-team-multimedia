@@ -28,8 +28,6 @@ import {
   VALIDITY_THRESHOLDS,
   RELIABILITY_THRESHOLDS,
   SAMPLE_SIZE_GUIDELINES,
-  COGNITIVE_INTERVIEW_PROBES,
-  COSMIN_PROPERTIES,
 } from './knowledge'
 
 import { ReliabilityAnalyzer, ContentValidityAnalyzer } from './QuestionnaireService'
@@ -463,7 +461,6 @@ export class PilotStudyWorkflow {
     itemIds: string[]
   ): PilotStudyPhaseResult {
     const sampleSize = data.length
-    const itemCount = itemIds.length
 
     // Basic reliability
     const reliability = ReliabilityAnalyzer.analyzeReliability(data, itemIds)

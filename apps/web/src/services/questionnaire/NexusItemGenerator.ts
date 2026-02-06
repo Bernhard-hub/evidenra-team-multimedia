@@ -20,9 +20,7 @@ import {
   ConstructDimension,
   SourceSegment,
   Scale,
-  ScaleItem,
   ItemQualityReport,
-  ResponseFormat,
 } from './types'
 
 import { ItemQualityAnalyzer } from './QuestionnaireService'
@@ -216,7 +214,7 @@ export class ConstructExtractor {
 
   private static identifyRelatedConstructs(
     codes: QualitativeCode[],
-    segments: QualitativeSegment[]
+    _segments: QualitativeSegment[]
   ): string[] {
     const related: string[] = []
 
@@ -553,7 +551,7 @@ export class ItemGenerator {
     return words.slice(start, end).join(' ')
   }
 
-  private static generatePositiveItemDE(concept: string, dimension: string): string {
+  private static generatePositiveItemDE(concept: string, _dimension: string): string {
     const templates = [
       `Ich erlebe ${concept.toLowerCase()} als positiv.`,
       `${concept} ist für mich wichtig.`,
@@ -566,7 +564,7 @@ export class ItemGenerator {
     return templates[Math.floor(Math.random() * templates.length)]
   }
 
-  private static generateNegativeItemDE(concept: string, dimension: string): string {
+  private static generateNegativeItemDE(concept: string, _dimension: string): string {
     const templates = [
       `${concept} bereitet mir Schwierigkeiten.`,
       `Ich habe Probleme mit ${concept.toLowerCase()}.`,
@@ -578,7 +576,7 @@ export class ItemGenerator {
     return templates[Math.floor(Math.random() * templates.length)]
   }
 
-  private static generatePositiveItemEN(concept: string, dimension: string): string {
+  private static generatePositiveItemEN(concept: string, _dimension: string): string {
     const templates = [
       `I experience ${concept.toLowerCase()} positively.`,
       `${concept} is important to me.`,
@@ -590,7 +588,7 @@ export class ItemGenerator {
     return templates[Math.floor(Math.random() * templates.length)]
   }
 
-  private static generateNegativeItemEN(concept: string, dimension: string): string {
+  private static generateNegativeItemEN(concept: string, _dimension: string): string {
     const templates = [
       `${concept} causes me difficulties.`,
       `I struggle with ${concept.toLowerCase()}.`,
@@ -605,7 +603,7 @@ export class ItemGenerator {
   private static improveItem(
     item: string,
     report: ItemQualityReport,
-    language: 'de' | 'en'
+    _language: 'de' | 'en'
   ): string {
     let improved = item
 

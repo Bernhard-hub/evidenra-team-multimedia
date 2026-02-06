@@ -19,14 +19,9 @@ import {
   IconChartBar,
   IconChecks,
   IconFileText,
-  IconX,
-  IconMaximize,
-  IconMinimize,
   IconPlus,
   IconChevronLeft,
   IconChevronRight,
-  IconSettings,
-  IconDownload,
   IconSparkles,
 } from '@tabler/icons-react'
 
@@ -206,29 +201,45 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
 
   // Handle scale selection from browser
   const handleAdaptScale = useCallback((zisScale: any) => {
+    // ZISScale has: construct (singular), responseFormat, itemCount (not items array)
+    // Generate placeholder items based on itemCount
+    const itemCount = zisScale.itemCount || zisScale.items?.length || 0
+    const items = zisScale.items
+      ? zisScale.items.map((item: string, i: number) => ({
+          id: `item-${i}`,
+          text: item,
+          dimensionId: 'main',
+          responseFormat: {
+            type: 'likert' as const,
+            points: zisScale.responseFormat?.points || zisScale.responseScale?.points || 5,
+            labels: zisScale.responseFormat?.anchors || zisScale.responseScale?.labels || [],
+          },
+        }))
+      : Array.from({ length: itemCount }, (_, i) => ({
+          id: `item-${i}`,
+          text: `Item ${i + 1} (bitte ausfüllen)`,
+          dimensionId: 'main',
+          responseFormat: {
+            type: 'likert' as const,
+            points: zisScale.responseFormat?.points || 5,
+            labels: [],
+          },
+        }))
+
     const newScale: Scale = {
       id: `scale-${Date.now()}`,
       name: zisScale.name,
-      description: zisScale.description,
+      description: zisScale.description || '',
       constructDefinition: {
-        name: zisScale.constructs[0] || zisScale.name,
-        definition: zisScale.description,
-        dimensions: [],
+        name: zisScale.construct || zisScale.constructs?.[0] || zisScale.name,
+        definition: zisScale.description || '',
+        dimensions: zisScale.dimensions || [],
       },
-      items: zisScale.items.map((item: string, i: number) => ({
-        id: `item-${i}`,
-        text: item,
-        dimensionId: 'main',
-        responseFormat: {
-          type: 'likert',
-          points: zisScale.responseScale.points,
-          labels: zisScale.responseScale.labels,
-        },
-      })),
+      items,
       responseFormat: {
         type: 'likert',
-        points: zisScale.responseScale.points,
-        labels: zisScale.responseScale.labels,
+        points: zisScale.responseFormat?.points || zisScale.responseScale?.points || 5,
+        labels: zisScale.responseFormat?.anchors || zisScale.responseScale?.labels || [],
       },
       language: [language],
       version: '1.0',
@@ -237,7 +248,7 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
       sourceScale: {
         id: zisScale.id,
         name: zisScale.name,
-        reference: zisScale.reference,
+        reference: zisScale.citation || zisScale.reference || '',
       },
     }
 

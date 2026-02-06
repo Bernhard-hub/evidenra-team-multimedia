@@ -159,7 +159,7 @@ export class ItemQualityAnalyzer {
   private static checkLength(item: string): ItemIssue[] {
     const issues: ItemIssue[] = []
     const wordCount = item.split(/\s+/).length
-    const { minimum, maximum, optimal } = ITEM_WRITING_RULES.guidelines.length
+    const { minimum, maximum } = ITEM_WRITING_RULES.guidelines.length
 
     if (wordCount < minimum) {
       issues.push({

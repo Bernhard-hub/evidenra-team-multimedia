@@ -34,8 +34,6 @@ import {
   NexusQuestionnaireIntegration,
   NexusQuestionnaireContextBuilder,
   buildQuestionnaireSystemPrompt,
-  NEXUS_QUESTIONNAIRE_ACTIONS,
-  type NexusQuestionnaireAction,
   type NexusQuestionnaireContext,
 } from '@services/questionnaire'
 
@@ -98,7 +96,7 @@ export const NexusAIChat: React.FC<NexusAIChatProps> = ({
   language = 'de',
   isOpen,
   onClose,
-  onApplySuggestion
+  onApplySuggestion: _onApplySuggestion
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')

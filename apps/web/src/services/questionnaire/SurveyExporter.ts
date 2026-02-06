@@ -17,15 +17,10 @@
 
 import {
   Scale,
-  ScaleItem,
-  ResponseFormat,
   MethodsSectionData,
-  AdaptationProcess,
-  ReliabilityResult,
-  FactorAnalysisResult,
 } from './types'
 
-import { EXPORT_FORMATS, LIKERT_SCALE_GUIDELINES } from './knowledge'
+import { LIKERT_SCALE_GUIDELINES } from './knowledge'
 
 // ============================================================================
 // TYPES
@@ -524,7 +519,7 @@ export class CSVExporter {
     }
   }
 
-  private static generateCSV(scale: Scale, options: ExportOptions): string {
+  private static generateCSV(scale: Scale, _options: ExportOptions): string {
     const headers = [
       'Item_ID',
       'Item_Number',

@@ -20,37 +20,27 @@ import {
   IconChevronRight,
   IconChevronDown,
   IconUsers,
-  IconFileText,
   IconChartBar,
   IconNetwork,
   IconBook,
-  IconClipboardCheck,
-  IconChecks,
   IconTrendingUp,
   IconTrendingDown,
   IconMinus,
   IconInfoCircle,
-  IconExternalLink,
-  IconPlus,
   IconUpload,
   IconDownload,
 } from '@tabler/icons-react'
 
 import {
   ValidationProject,
-  ValidationStatus,
   ContentValidityPhaseResult,
   CognitiveInterviewPhaseResult,
   PilotStudyPhaseResult,
   FullValidationPhaseResult,
-  ExpertReview,
-  CognitiveInterviewResult,
 } from '@services/questionnaire/ValidationWorkflow'
 
 import {
   Scale,
-  ReliabilityResult,
-  FactorAnalysisResult,
 } from '@services/questionnaire/types'
 
 import {
@@ -178,7 +168,7 @@ const TRANSLATIONS = {
   },
 }
 
-const PHASE_ORDER: Phase[] = [
+const _PHASE_ORDER: Phase[] = [
   'content-validity',
   'cognitive-interviews',
   'pilot-study',
@@ -192,7 +182,7 @@ const PHASE_ORDER: Phase[] = [
 export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
   project,
   scale,
-  onUpdateProject,
+  onUpdateProject: _onUpdateProject,
   onStartPhase,
   onOpenNexus,
   language = 'de',
@@ -453,7 +443,7 @@ interface ContentValidityPhaseContentProps {
 
 const ContentValidityPhaseContent: React.FC<ContentValidityPhaseContentProps> = ({
   result,
-  scale,
+  scale: _scale,
   onStartPhase,
   onOpenNexus,
   language,
@@ -573,7 +563,7 @@ interface CognitiveInterviewPhaseContentProps {
 
 const CognitiveInterviewPhaseContent: React.FC<CognitiveInterviewPhaseContentProps> = ({
   result,
-  scale,
+  scale: _scale,
   isEnabled,
   onStartPhase,
   onOpenNexus,
