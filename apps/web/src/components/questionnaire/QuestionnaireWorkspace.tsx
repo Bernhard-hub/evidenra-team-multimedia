@@ -353,7 +353,7 @@ export const QuestionnaireWorkspace: React.FC<QuestionnaireWorkspaceProps> = ({
                     name: result.scale.name,
                     description: result.scale.description,
                     constructDefinition: {
-                      name: result.scale.constructs[0] || result.scale.name,
+                      name: result.scale.constructs?.[0] || result.scale.name,
                       definition: result.scale.description,
                       dimensions: [],
                     },
@@ -406,7 +406,7 @@ export const QuestionnaireWorkspace: React.FC<QuestionnaireWorkspaceProps> = ({
                   name: scale.name,
                   description: scale.description,
                   constructDefinition: {
-                    name: scale.constructs[0] || scale.name,
+                    name: scale.constructs?.[0] || scale.name,
                     definition: scale.description,
                     dimensions: [],
                   },
