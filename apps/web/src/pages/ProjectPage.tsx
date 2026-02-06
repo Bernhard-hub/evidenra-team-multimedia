@@ -60,7 +60,7 @@ export default function ProjectPage() {
   const [showThesisGenerator, setShowThesisGenerator] = useState(false)
 
   // Get Claude API key from localStorage or env
-  const claudeApiKey = localStorage.getItem('claude_api_key') || import.meta.env.VITE_ANTHROPIC_API_KEY || ''
+  const claudeApiKey = localStorage.getItem('claude-api-key') || import.meta.env.VITE_ANTHROPIC_API_KEY || ''
 
   // Set project ID in methodology context when project loads
   useEffect(() => {
