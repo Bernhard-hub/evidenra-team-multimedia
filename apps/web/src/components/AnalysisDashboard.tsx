@@ -129,7 +129,7 @@ export default function AnalysisDashboard({
 
       {/* Chart Selector */}
       <div className="bg-surface-900 rounded-xl border border-surface-800 overflow-hidden">
-        <div className="flex border-b border-surface-800">
+        <div className="flex border-b border-surface-800 overflow-x-auto scrollbar-thin scrollbar-thumb-surface-700">
           <ChartTab
             label="Code-Häufigkeit"
             isActive={activeChart === 'frequency'}
@@ -355,7 +355,7 @@ function ChartTab({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-3 text-sm font-medium transition-colors ${
+      className={`px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
         isActive
           ? 'text-primary-400 border-b-2 border-primary-500 -mb-px'
           : 'text-surface-400 hover:text-surface-200'
