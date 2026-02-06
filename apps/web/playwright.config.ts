@@ -42,9 +42,25 @@ export default defineConfig({
 
   // Configure projects for major browsers
   projects: [
+    // Setup project for authentication
+    {
+      name: 'setup',
+      testMatch: /auth-setup\.spec\.ts/,
+    },
     {
       name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Use saved auth state if available
+        storageState: 'playwright/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
+    // Run without auth for specific tests
+    {
+      name: 'chromium-no-auth',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: /smoke\.spec\.ts/,
     },
     // Uncomment to test on more browsers:
     // {
