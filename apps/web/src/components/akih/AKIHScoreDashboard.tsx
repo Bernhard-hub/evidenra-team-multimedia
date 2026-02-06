@@ -3,7 +3,7 @@
  * Main dashboard component for AKIH Score display and management
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   IconInfoCircle,
   IconDownload,
@@ -12,15 +12,20 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconClipboardCheck,
+  IconFileText,
+  IconFileSpreadsheet,
+  IconBrandHtml5,
 } from '@tabler/icons-react'
 import AKIHScoreGauge from './AKIHScoreGauge'
 import AKIHComponentsBreakdown from './AKIHComponentsBreakdown'
 import AKIHPhaseProgress from './AKIHPhaseProgress'
 import AKIHSuggestions from './AKIHSuggestions'
+import { downloadAKIHReport } from '@/services/AKIHExportService'
 import type { AKIHScoreResult, AKIHSuggestion } from '@/types/akih'
 
 interface AKIHScoreDashboardProps {
   result: AKIHScoreResult
+  projectName?: string
   onRefresh?: () => void
   onExport?: () => void
   onSettingsClick?: () => void
@@ -32,6 +37,7 @@ interface AKIHScoreDashboardProps {
 
 export default function AKIHScoreDashboard({
   result,
+  projectName,
   onRefresh,
   onExport,
   onSettingsClick,
@@ -41,6 +47,25 @@ export default function AKIHScoreDashboard({
   showValidationButton = true,
 }: AKIHScoreDashboardProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>('components')
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close export menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleExport = (format: 'json' | 'csv' | 'html') => {
+    downloadAKIHReport(result, format, { projectName })
+    setShowExportMenu(false)
+    onExport?.()
+  }
 
   // TI and HV as percentages (0.5-1.0 → 0-100%)
   const tiPercent = useMemo(() => Math.round((result.transparencyIndex - 0.5) * 200), [result])
@@ -94,15 +119,42 @@ export default function AKIHScoreDashboard({
             </button>
           )}
 
-          {onExport && (
+          {/* Export dropdown */}
+          <div className="relative" ref={exportMenuRef}>
             <button
-              onClick={onExport}
+              onClick={() => setShowExportMenu(!showExportMenu)}
               className="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-surface-400 hover:text-surface-200 transition-colors"
               title="Exportieren"
             >
               <IconDownload size={16} />
             </button>
-          )}
+
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-surface-800 border border-surface-700 rounded-lg shadow-xl z-20 overflow-hidden">
+                <button
+                  onClick={() => handleExport('html')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-300 hover:bg-surface-700 transition-colors"
+                >
+                  <IconBrandHtml5 size={16} className="text-orange-400" />
+                  <span>HTML Report</span>
+                </button>
+                <button
+                  onClick={() => handleExport('json')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-300 hover:bg-surface-700 transition-colors"
+                >
+                  <IconFileText size={16} className="text-blue-400" />
+                  <span>JSON Export</span>
+                </button>
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-300 hover:bg-surface-700 transition-colors"
+                >
+                  <IconFileSpreadsheet size={16} className="text-green-400" />
+                  <span>CSV Export</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {onSettingsClick && (
             <button
