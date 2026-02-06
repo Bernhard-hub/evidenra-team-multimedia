@@ -6,8 +6,8 @@ import { Page, expect } from '@playwright/test'
 
 // Test user credentials (use environment variables in CI)
 export const TEST_USER = {
-  email: process.env.TEST_USER_EMAIL || 'test@evidenra.com',
-  password: process.env.TEST_USER_PASSWORD || 'testpassword123',
+  email: process.env.TEST_USER_EMAIL || 'e2e-test@evidenra.com',
+  password: process.env.TEST_USER_PASSWORD || 'TestPassword123!',
 }
 
 /**

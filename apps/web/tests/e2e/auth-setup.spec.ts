@@ -4,13 +4,15 @@ import { test as setup } from '@playwright/test'
  * Authentication Setup for Playwright Tests
  *
  * Run this first to save auth state:
- * npx playwright test auth-setup.spec.ts --headed
+ * npx playwright test auth-setup.spec.ts --headed --timeout=360000
  *
  * Then run other tests with saved auth:
  * npx playwright test click-everything.spec.ts --headed
  */
 
 const AUTH_FILE = 'playwright/.auth/user.json'
+
+setup.setTimeout(360000) // 6 minutes
 
 setup('Authenticate and save session', async ({ page }) => {
   console.log('\n🔐 Starting authentication setup...')

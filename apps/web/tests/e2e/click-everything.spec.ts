@@ -9,6 +9,10 @@ import { test, expect, Page, Locator } from '@playwright/test'
  * Ausführen: npx playwright test click-everything.spec.ts --headed --timeout=600000
  */
 
+// Test user credentials
+const TEST_EMAIL = 'e2e-test@evidenra.com'
+const TEST_PASSWORD = 'TestPassword123!'
+
 interface ClickResult {
   element: string
   success: boolean
@@ -19,7 +23,7 @@ const errors: string[] = []
 const clicked: ClickResult[] = []
 const visitedUrls: Set<string> = new Set()
 
-// NUR diese Aktionen überspringen (wirklich gefährlich)
+// Diese Aktionen überspringen (gefährlich oder verlässt den Context)
 const DANGEROUS_ACTIONS = [
   'löschen',
   'delete',
@@ -27,7 +31,33 @@ const DANGEROUS_ACTIONS = [
   'logout',
   'sign out',
   'konto löschen',
-  'entfernen', // only if it deletes data
+  'entfernen',
+]
+
+// Diese Links/Buttons überspringen (navigieren weg oder öffnen externe Seiten)
+const SKIP_NAVIGATION = [
+  'upgrade',
+  'pricing',
+  'preise',
+  'stripe',
+  'checkout',
+  'google',
+  'github',
+  'oauth',
+  'import', // can open file dialogs
+  'dashboard', // navigate via goto
+  'fragebogen', // navigate via goto
+  'questionnaire',
+  'team', // navigate via goto
+  'einstellungen', // navigate via goto
+  'settings',
+  'profil', // opens dropdown or navigates
+  'profile',
+  'projekt', // navigate via goto
+  'project',
+  'nexus', // opens NEXUS panel which changes context
+  'ki-assistent',
+  'ai assistant',
 ]
 
 test.describe('CLICK EVERYTHING - Comprehensive Interactive Test', () => {
@@ -55,11 +85,22 @@ test.describe('CLICK EVERYTHING - Comprehensive Interactive Test', () => {
     await page.waitForTimeout(3000)
 
     if (page.url().includes('/login')) {
-      console.log('\n⚠️ NOT LOGGED IN - Testing login page only')
-      await clickEverythingOnPage(page, 'Login Page')
+      console.log('\n🔐 LOGGING IN with test user...')
 
-      // Try demo login if available
-      await tryClick(page, 'button:has-text("Demo")', 'Demo Login')
+      // Fill in login form
+      await page.fill('input[type="email"]', TEST_EMAIL)
+      await page.fill('input[type="password"]', TEST_PASSWORD)
+      await page.click('button[type="submit"]')
+
+      // Wait for login to complete
+      try {
+        await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 })
+        console.log('✅ Login successful!')
+      } catch {
+        console.log('❌ Login failed - testing public pages only')
+        await clickEverythingOnPage(page, 'Login Page')
+      }
+
       await page.waitForTimeout(2000)
     }
 
@@ -291,6 +332,13 @@ async function clickAllOfType(page: Page, selector: string, type: string) {
           continue
         }
 
+        // Skip navigation that leaves context
+        if (shouldSkipNavigation(name)) {
+          console.log(`    ⏭️ SKIPPED (navigation): ${name}`)
+          clicked.push({ element: `[SKIPPED] ${name}`, success: false, error: 'Navigation skip' })
+          continue
+        }
+
         // Check if visible and enabled
         if (!(await el.isVisible())) continue
         if (await el.isDisabled()) continue
@@ -366,4 +414,9 @@ async function closeAnyModals(page: Page) {
 function isDangerous(text: string): boolean {
   const lowerText = text.toLowerCase()
   return DANGEROUS_ACTIONS.some(action => lowerText.includes(action))
+}
+
+function shouldSkipNavigation(text: string): boolean {
+  const lowerText = text.toLowerCase()
+  return SKIP_NAVIGATION.some(pattern => lowerText.includes(pattern))
 }
