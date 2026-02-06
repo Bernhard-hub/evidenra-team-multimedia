@@ -226,7 +226,7 @@ export const ScaleBrowser: React.FC<ScaleBrowserProps> = ({
 
   // Copy items to clipboard
   const copyItems = useCallback(async (scale: ZISScale) => {
-    const itemsText = scale.items.map((item, i) => `${i + 1}. ${item}`).join('\n')
+    const itemsText = (scale.items || []).map((item, i) => `${i + 1}. ${item}`).join('\n')
     await navigator.clipboard.writeText(itemsText)
     setCopiedId(scale.id)
     setTimeout(() => setCopiedId(null), 2000)
@@ -560,7 +560,7 @@ const ScaleListItem: React.FC<ScaleListItemProps> = ({
           <div>
             <h5 className="text-xs text-slate-500 mb-2">{t.items}</h5>
             <div className="space-y-1 max-h-[150px] overflow-y-auto">
-              {scale.items.map((item, i) => (
+              {(scale.items || []).map((item, i) => (
                 <p key={i} className="text-xs text-slate-400 pl-4 border-l border-slate-700">
                   {i + 1}. {item}
                 </p>

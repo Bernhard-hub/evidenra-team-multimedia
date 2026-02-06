@@ -538,7 +538,7 @@ export const QuestionnairePage: React.FC<QuestionnairePageProps> = ({
       case 'quality':
         return (
           <ItemQualityChecker
-            initialItems={selectedScale?.items.map(i => i.text) || []}
+            initialItems={(selectedScale?.items || []).map(i => i.text)}
             onRequestAISuggestion={(item, issues) => {
               onOpenNexus?.(
                 language === 'de'

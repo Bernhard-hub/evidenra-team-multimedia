@@ -357,7 +357,7 @@ export const QuestionnaireWorkspace: React.FC<QuestionnaireWorkspaceProps> = ({
                       definition: result.scale.description,
                       dimensions: [],
                     },
-                    items: result.scale.items.map((item, i) => ({
+                    items: (result.scale.items || []).map((item, i) => ({
                       id: `${result.scale.id}-item-${i}`,
                       text: item,
                       dimensionId: 'main',
@@ -410,7 +410,7 @@ export const QuestionnaireWorkspace: React.FC<QuestionnaireWorkspaceProps> = ({
                     definition: scale.description,
                     dimensions: [],
                   },
-                  items: scale.items.map((item, i) => ({
+                  items: (scale.items || []).map((item, i) => ({
                     id: `${scale.id}-item-${i}`,
                     text: item,
                     dimensionId: 'main',
