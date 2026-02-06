@@ -859,13 +859,24 @@ export const invitationsApi = {
       return { data: null, error: new Error('Invitation has expired') }
     }
 
+    // Map invitation role to database enum
+    // DB enum: 'owner', 'admin', 'member'
+    // Invitation roles: 'admin', 'editor', 'viewer'
+    const roleMapping: Record<string, string> = {
+      'owner': 'owner',
+      'admin': 'admin',
+      'editor': 'member',  // editor -> member in DB
+      'viewer': 'member',  // viewer -> member in DB
+    }
+    const dbRole = roleMapping[invitation.role] || 'member'
+
     // Add user as member
     const { error: memberError } = await supabase
       .from('organization_members')
       .insert({
         organization_id: invitation.organization_id,
         user_id: user.id,
-        role: invitation.role,
+        role: dbRole,
         invited_by: invitation.invited_by,
       })
 
