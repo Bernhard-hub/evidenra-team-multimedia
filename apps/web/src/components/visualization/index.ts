@@ -7,3 +7,6 @@ export { ChartExportButton } from './shared/ChartExportButton'
 
 // Sprint 2 - Network Visualizations
 export { default as CategoryNetworkGraph } from './network/CategoryNetworkGraph'
+
+// Sprint 3 - Psychometrics
+export { default as PsychometricsDashboard } from './psychometrics/PsychometricsDashboard'
