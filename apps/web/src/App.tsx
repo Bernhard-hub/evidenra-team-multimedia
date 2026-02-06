@@ -7,6 +7,8 @@ import OnboardingModal from '@/components/OnboardingModal'
 import { PaywallOverlay } from '@/components/SubscriptionBanner'
 import { UserWatermark } from '@/components/UserWatermark'
 import { registerDevice } from '@/hooks/useDeviceFingerprint'
+import { getAnalytics } from '@/services/BehavioralAnalytics'
+import { setExportWatermark } from '@/lib/export'
 
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
@@ -59,6 +61,28 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       })
     }
   }, [user?.id])
+
+  // Phase 3: Initialize Analytics Session
+  useEffect(() => {
+    if (user?.id && user?.email) {
+      const analytics = getAnalytics()
+
+      // Versuche bestehende Session wiederherzustellen
+      if (!analytics.restoreSession()) {
+        // Starte neue Session
+        const deviceId = localStorage.getItem('device-fingerprint') || 'unknown'
+        analytics.startSession(user.id, deviceId)
+      }
+
+      // Setze Export-Wasserzeichen für alle Exporte
+      setExportWatermark(user.id, user.email)
+
+      // Cleanup bei Logout
+      return () => {
+        analytics.endSession()
+      }
+    }
+  }, [user?.id, user?.email])
 
   // Show loading while initializing auth
   if (!authInitialized || authLoading) {

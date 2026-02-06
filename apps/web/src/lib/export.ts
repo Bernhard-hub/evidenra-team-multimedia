@@ -1,10 +1,37 @@
 import type { Project, Document, Code, Coding } from '@/stores/projectStore'
+import {
+  generateWatermarkData,
+  watermarkCSV,
+  watermarkJSON,
+  watermarkXLSX,
+  generateWatermarkedFilename,
+  type WatermarkData,
+} from '@/services/ExportWatermark'
+import { getAnalytics } from '@/services/BehavioralAnalytics'
 
 export interface ExportData {
   project: Project
   documents: Document[]
   codes: Code[]
   codings: Coding[]
+}
+
+// Wasserzeichen-Kontext für Exports
+let currentWatermark: WatermarkData | null = null
+
+/**
+ * Setzt den Wasserzeichen-Kontext für Exports
+ */
+export function setExportWatermark(
+  userId: string,
+  userEmail: string,
+  options?: {
+    organizationId?: string
+    organizationName?: string
+    projectId?: string
+  }
+): void {
+  currentWatermark = generateWatermarkData(userId, userEmail, options)
 }
 
 export interface ExportOptions {
@@ -34,7 +61,14 @@ export function exportToCSV(data: ExportData, options: ExportOptions): string {
     sections.push(generateDocumentsCSV(data.documents))
   }
 
-  return sections.join('\n\n')
+  let csv = sections.join('\n\n')
+
+  // Phase 3: Wasserzeichen hinzufügen
+  if (currentWatermark) {
+    csv = watermarkCSV(csv, currentWatermark)
+  }
+
+  return csv
 }
 
 function generateCodesCSV(codes: Code[]): string {
@@ -148,6 +182,12 @@ export function exportToJSON(data: ExportData, options: ExportOptions): string {
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     }))
+  }
+
+  // Phase 3: Wasserzeichen hinzufügen
+  if (currentWatermark) {
+    const watermarked = watermarkJSON(exportObj, currentWatermark)
+    return JSON.stringify(watermarked, null, 2)
   }
 
   return JSON.stringify(exportObj, null, 2)
@@ -350,6 +390,11 @@ export async function exportToExcel(data: ExportData, options: ExportOptions): P
     }
   }
 
+  // Phase 3: Wasserzeichen hinzufügen
+  if (currentWatermark) {
+    watermarkXLSX(workbook, currentWatermark, XLSX)
+  }
+
   // Generate binary
   const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
   return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
@@ -389,25 +434,37 @@ export async function exportProject(
   data: ExportData,
   options: ExportOptions
 ): Promise<void> {
-  const timestamp = new Date().toISOString().slice(0, 10)
-  const baseName = `${data.project.name.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}`
+  const baseName = data.project.name.replace(/[^a-zA-Z0-9]/g, '_')
+
+  // Phase 3: Analytics-Tracking
+  const analytics = getAnalytics()
+  analytics.trackExport(format, data.documents.length)
+
+  // Generiere Dateinamen (mit Wasserzeichen-Hash wenn vorhanden)
+  const getFilename = (ext: string) => {
+    if (currentWatermark) {
+      return generateWatermarkedFilename(baseName, ext, currentWatermark, true)
+    }
+    const timestamp = new Date().toISOString().slice(0, 10)
+    return `${baseName}_${timestamp}.${ext}`
+  }
 
   switch (format) {
     case 'csv': {
       const csv = exportToCSV(data, options)
-      downloadFile(csv, `${baseName}.csv`, 'text/csv')
+      downloadFile(csv, getFilename('csv'), 'text/csv')
       break
     }
 
     case 'json': {
       const json = exportToJSON(data, options)
-      downloadFile(json, `${baseName}.json`, 'application/json')
+      downloadFile(json, getFilename('json'), 'application/json')
       break
     }
 
     case 'xlsx': {
       const blob = await exportToExcel(data, options)
-      downloadFile(blob, `${baseName}.xlsx`)
+      downloadFile(blob, getFilename('xlsx'))
       break
     }
 
@@ -416,7 +473,7 @@ export async function exportProject(
       // Both use REFI-QDA XML format
       const xml = exportToREFIQDA(data, options)
       const extension = format === 'maxqda' ? 'qdpx' : 'atlproj'
-      downloadFile(xml, `${baseName}.${extension}`, 'application/xml')
+      downloadFile(xml, getFilename(extension), 'application/xml')
       break
     }
   }
