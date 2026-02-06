@@ -14,3 +14,7 @@ export { default as PsychometricsDashboard } from './psychometrics/Psychometrics
 // Sprint 4 - Response Analysis & Reliability Simulation
 export { default as ResponseDistribution } from './psychometrics/ResponseDistribution'
 export { default as ReliabilitySimulator } from './psychometrics/ReliabilitySimulator'
+
+// Sprint 5 - Advanced Charts
+export { default as PersonaRadarChart } from './charts/PersonaRadarChart'
+export { default as CodeTrendsTimeline } from './charts/CodeTrendsTimeline'

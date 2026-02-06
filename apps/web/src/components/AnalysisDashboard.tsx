@@ -4,6 +4,7 @@ import {
   CoOccurrenceMatrix,
   CodeDocumentHeatmap,
   CategoryNetworkGraph,
+  CodeTrendsTimeline,
 } from './visualization'
 import CodingTimeline from './CodingTimeline'
 import IRRPanel from './IRRPanel'
@@ -15,7 +16,7 @@ interface AnalysisDashboardProps {
   documents: Document[]
 }
 
-type ChartType = 'frequency' | 'cooccurrence' | 'document-heatmap' | 'network' | 'timeline' | 'methods' | 'irr'
+type ChartType = 'frequency' | 'cooccurrence' | 'document-heatmap' | 'network' | 'trends' | 'timeline' | 'methods' | 'irr'
 
 export default function AnalysisDashboard({
   codes,
@@ -114,6 +115,11 @@ export default function AnalysisDashboard({
             onClick={() => setActiveChart('network')}
           />
           <ChartTab
+            label="Trends"
+            isActive={activeChart === 'trends'}
+            onClick={() => setActiveChart('trends')}
+          />
+          <ChartTab
             label="Zeitverlauf"
             isActive={activeChart === 'timeline'}
             onClick={() => setActiveChart('timeline')}
@@ -182,6 +188,16 @@ export default function AnalysisDashboard({
               codes={codes}
               codings={codings}
               showExport={true}
+            />
+          )}
+
+          {activeChart === 'trends' && (
+            <CodeTrendsTimeline
+              codes={codes}
+              codings={codings}
+              documents={documents}
+              showExport={true}
+              maxCodes={8}
             />
           )}
 
