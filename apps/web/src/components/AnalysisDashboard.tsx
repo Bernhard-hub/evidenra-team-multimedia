@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import CodeFrequencyChart from './CodeFrequencyChart'
-import CoOccurrenceMatrix from './CoOccurrenceMatrix'
+import {
+  CodeFrequencyChart,
+  CoOccurrenceMatrix,
+  CodeDocumentHeatmap,
+} from './visualization'
 import CodingTimeline from './CodingTimeline'
 import IRRPanel from './IRRPanel'
 import type { Code, Coding, Document } from '@/stores/projectStore'
@@ -11,7 +14,7 @@ interface AnalysisDashboardProps {
   documents: Document[]
 }
 
-type ChartType = 'frequency' | 'cooccurrence' | 'timeline' | 'methods' | 'irr'
+type ChartType = 'frequency' | 'cooccurrence' | 'document-heatmap' | 'timeline' | 'methods' | 'irr'
 
 export default function AnalysisDashboard({
   codes,
@@ -100,6 +103,11 @@ export default function AnalysisDashboard({
             onClick={() => setActiveChart('cooccurrence')}
           />
           <ChartTab
+            label="Code-Dokument"
+            isActive={activeChart === 'document-heatmap'}
+            onClick={() => setActiveChart('document-heatmap')}
+          />
+          <ChartTab
             label="Zeitverlauf"
             isActive={activeChart === 'timeline'}
             onClick={() => setActiveChart('timeline')}
@@ -139,7 +147,7 @@ export default function AnalysisDashboard({
 
           {/* Charts */}
           {activeChart === 'frequency' && (
-            <CodeFrequencyChart codes={codes} codings={codings} maxBars={10} />
+            <CodeFrequencyChart codes={codes} codings={codings} maxBars={10} showExport={true} />
           )}
 
           {activeChart === 'cooccurrence' && (
@@ -148,6 +156,18 @@ export default function AnalysisDashboard({
               codings={codings}
               documents={documents}
               maxCodes={8}
+              showExport={true}
+            />
+          )}
+
+          {activeChart === 'document-heatmap' && (
+            <CodeDocumentHeatmap
+              codes={codes}
+              codings={codings}
+              documents={documents}
+              maxCodes={10}
+              maxDocuments={10}
+              showExport={true}
             />
           )}
 
