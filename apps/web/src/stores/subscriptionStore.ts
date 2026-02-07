@@ -490,8 +490,18 @@ export function useHasActiveSubscription(): boolean {
   const subscription = useSubscriptionStore(state => state.subscription)
   if (!subscription) return false
 
-  const validStatuses: SubscriptionStatus[] = ['trialing', 'active']
-  return validStatuses.includes(subscription.status)
+  // Active subscription is always valid
+  if (subscription.status === 'active') return true
+
+  // Trialing is only valid if trial hasn't expired
+  if (subscription.status === 'trialing') {
+    if (!subscription.trialEnd) return true // No end date = valid
+    const now = new Date()
+    const trialEnd = new Date(subscription.trialEnd)
+    return trialEnd > now // Only valid if trial end is in the future
+  }
+
+  return false
 }
 
 export function useNeedsOnboarding(): boolean {
