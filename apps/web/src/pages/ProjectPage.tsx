@@ -265,16 +265,22 @@ export default function ProjectPage() {
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                    onClick={() => {
+                      if (activeTab !== tab.id) {
+                        setActiveTab(tab.id)
+                      }
+                    }}
+                    className={`pb-3 text-sm font-medium border-b-2 transition-all ${
                       activeTab === tab.id
                         ? 'border-primary-500 text-primary-400'
-                        : 'border-transparent text-surface-400 hover:text-surface-100'
+                        : 'border-transparent text-surface-400 hover:text-surface-100 hover:border-surface-600'
                     }`}
                   >
                     {tab.name}
                     {tab.count !== undefined && (
-                      <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-surface-800">
+                      <span className={`ml-2 px-1.5 py-0.5 rounded text-xs ${
+                        activeTab === tab.id ? 'bg-primary-500/20' : 'bg-surface-800'
+                      }`}>
                         {tab.count}
                       </span>
                     )}

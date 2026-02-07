@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '@/components/Layout'
 import { useAuthStore } from '@/stores/authStore'
 import { claude } from '@/lib/claude'
 import { hasOpenAIKey, setOpenAIKey, clearOpenAIKey } from '@/lib/transcription'
+import { supabase } from '@/lib/supabase'
 import {
   useSubscriptionStore,
   useIsTrialing,
@@ -104,22 +105,177 @@ export default function SettingsPage() {
 function ProfileSettings({ user }: { user: any }) {
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '')
   const [email] = useState(user?.email || '')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.user_metadata?.avatar_url || null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Password states
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Handle avatar upload
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Bitte wählen Sie eine Bilddatei.' })
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Die Datei darf maximal 2MB groß sein.' })
+      return
+    }
+
+    setIsUploading(true)
+    setMessage(null)
+
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // Update user metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      })
+
+      if (updateError) throw updateError
+
+      setAvatarUrl(publicUrl)
+      setMessage({ type: 'success', text: 'Profilbild wurde aktualisiert.' })
+    } catch (err) {
+      console.error('Avatar upload error:', err)
+      setMessage({ type: 'error', text: 'Fehler beim Hochladen des Bildes.' })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // Handle save profile
+  const handleSaveProfile = async () => {
+    setIsSaving(true)
+    setMessage(null)
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: fullName }
+      })
+
+      if (error) throw error
+
+      setMessage({ type: 'success', text: 'Profil wurde gespeichert.' })
+    } catch (err) {
+      console.error('Save profile error:', err)
+      setMessage({ type: 'error', text: 'Fehler beim Speichern des Profils.' })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Handle password change
+  const handleChangePassword = async () => {
+    setPasswordMessage(null)
+
+    // Validation
+    if (!newPassword || !confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Bitte füllen Sie alle Felder aus.' })
+      return
+    }
+    if (newPassword.length < 8) {
+      setPasswordMessage({ type: 'error', text: 'Das Passwort muss mindestens 8 Zeichen lang sein.' })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Die Passwörter stimmen nicht überein.' })
+      return
+    }
+
+    setIsChangingPassword(true)
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) throw error
+
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordMessage({ type: 'success', text: 'Passwort wurde geändert.' })
+    } catch (err) {
+      console.error('Password change error:', err)
+      setPasswordMessage({ type: 'error', text: 'Fehler beim Ändern des Passworts.' })
+    } finally {
+      setIsChangingPassword(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
       <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
         <h2 className="text-lg font-semibold text-surface-100 mb-6">Profil-Informationen</h2>
 
+        {/* Message */}
+        {message && (
+          <div className={`mb-4 p-3 rounded-lg text-sm ${
+            message.type === 'success'
+              ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+              : 'bg-red-500/10 border border-red-500/20 text-red-400'
+          }`}>
+            {message.text}
+          </div>
+        )}
+
         {/* Avatar */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-            <span className="text-2xl font-bold text-white">
-              {fullName?.split(' ').map((n: string) => n[0]).join('') || 'U'}
-            </span>
-          </div>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Avatar"
+              className="w-20 h-20 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+              <span className="text-2xl font-bold text-white">
+                {fullName?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+              </span>
+            </div>
+          )}
           <div>
-            <button className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium">
-              Bild ändern
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="px-4 py-2 rounded-lg border border-surface-700 text-surface-300 hover:bg-surface-800 text-sm font-medium disabled:opacity-50"
+            >
+              {isUploading ? 'Hochladen...' : 'Bild ändern'}
             </button>
             <p className="text-xs text-surface-500 mt-1">JPG, PNG oder GIF. Max. 2MB</p>
           </div>
@@ -147,8 +303,12 @@ function ProfileSettings({ user }: { user: any }) {
         </div>
 
         <div className="mt-6 pt-6 border-t border-surface-800 flex justify-end">
-          <button className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium">
-            Änderungen speichern
+          <button
+            onClick={handleSaveProfile}
+            disabled={isSaving}
+            className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium disabled:opacity-50"
+          >
+            {isSaving ? 'Speichern...' : 'Änderungen speichern'}
           </button>
         </div>
       </div>
@@ -156,11 +316,25 @@ function ProfileSettings({ user }: { user: any }) {
       {/* Password */}
       <div className="bg-surface-900 rounded-xl border border-surface-800 p-6">
         <h2 className="text-lg font-semibold text-surface-100 mb-6">Passwort ändern</h2>
+
+        {/* Password Message */}
+        {passwordMessage && (
+          <div className={`mb-4 p-3 rounded-lg text-sm ${
+            passwordMessage.type === 'success'
+              ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+              : 'bg-red-500/10 border border-red-500/20 text-red-400'
+          }`}>
+            {passwordMessage.text}
+          </div>
+        )}
+
         <div className="space-y-4 max-w-md">
           <div>
             <label className="block text-sm font-medium text-surface-300 mb-1.5">Aktuelles Passwort</label>
             <input
               type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
               className="w-full px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
               placeholder="••••••••"
             />
@@ -169,6 +343,8 @@ function ProfileSettings({ user }: { user: any }) {
             <label className="block text-sm font-medium text-surface-300 mb-1.5">Neues Passwort</label>
             <input
               type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
               className="w-full px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
               placeholder="••••••••"
             />
@@ -177,14 +353,20 @@ function ProfileSettings({ user }: { user: any }) {
             <label className="block text-sm font-medium text-surface-300 mb-1.5">Passwort bestätigen</label>
             <input
               type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-100 placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
               placeholder="••••••••"
             />
           </div>
         </div>
         <div className="mt-6 pt-6 border-t border-surface-800 flex justify-end">
-          <button className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium">
-            Passwort ändern
+          <button
+            onClick={handleChangePassword}
+            disabled={isChangingPassword}
+            className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium disabled:opacity-50"
+          >
+            {isChangingPassword ? 'Ändern...' : 'Passwort ändern'}
           </button>
         </div>
       </div>

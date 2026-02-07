@@ -78,6 +78,8 @@ export default function Layout({ children }: LayoutProps) {
   const { user, signOut } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const handleSignOut = () => {
     signOut()
@@ -88,7 +90,24 @@ export default function Layout({ children }: LayoutProps) {
   useEffect(() => {
     setSidebarOpen(false)
     setUserMenuOpen(false)
+    setNotificationsOpen(false)
+    setHelpOpen(false)
   }, [location.pathname])
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-notifications]')) {
+        setNotificationsOpen(false)
+      }
+      if (!target.closest('[data-help]')) {
+        setHelpOpen(false)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [])
 
   return (
     <div className="min-h-screen bg-surface-950">
@@ -239,19 +258,93 @@ export default function Layout({ children }: LayoutProps) {
             <SubscriptionBanner variant="header" />
 
             {/* Notifications */}
-            <button className="p-2 rounded-lg text-surface-400 hover:text-surface-100 hover:bg-surface-800 relative">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary-500 rounded-full" />
-            </button>
+            <div className="relative" data-notifications>
+              <button
+                onClick={() => {
+                  setNotificationsOpen(!notificationsOpen)
+                  setHelpOpen(false)
+                }}
+                className="p-2 rounded-lg text-surface-400 hover:text-surface-100 hover:bg-surface-800 relative"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary-500 rounded-full" />
+              </button>
+
+              {/* Notifications Dropdown */}
+              {notificationsOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-surface-800 rounded-xl border border-surface-700 shadow-xl z-50">
+                  <div className="p-4 border-b border-surface-700">
+                    <h3 className="font-semibold text-surface-100">Benachrichtigungen</h3>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    <div className="p-4 text-center text-surface-500">
+                      <svg className="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      <p className="text-sm">Keine neuen Benachrichtigungen</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Help */}
-            <button className="p-2 rounded-lg text-surface-400 hover:text-surface-100 hover:bg-surface-800">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
+            <div className="relative" data-help>
+              <button
+                onClick={() => {
+                  setHelpOpen(!helpOpen)
+                  setNotificationsOpen(false)
+                }}
+                className="p-2 rounded-lg text-surface-400 hover:text-surface-100 hover:bg-surface-800"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+
+              {/* Help Dropdown */}
+              {helpOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-surface-800 rounded-xl border border-surface-700 shadow-xl z-50">
+                  <div className="p-2">
+                    <a
+                      href="https://docs.evidenra.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-surface-300 hover:bg-surface-700"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                      Dokumentation
+                    </a>
+                    <a
+                      href="mailto:support@evidenra.com"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-surface-300 hover:bg-surface-700"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Support kontaktieren
+                    </a>
+                    <button
+                      onClick={() => {
+                        setHelpOpen(false)
+                        // Show keyboard shortcuts modal or navigate to help page
+                        alert('Tastenkürzel:\n\n⌘K - Suchen\n⌘S - Speichern\n⌘Z - Rückgängig\n⌘⇧Z - Wiederholen')
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-surface-300 hover:bg-surface-700"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
+                      </svg>
+                      Tastenkürzel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
